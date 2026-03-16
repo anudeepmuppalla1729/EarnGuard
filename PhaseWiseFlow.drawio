@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.1">
   <diagram name="Page-1" id="b5d-j7go-UxkkZ3RDGL5">
-    <mxGraphModel dx="1088" dy="687" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
+    <mxGraphModel dx="4080" dy="2575" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -140,10 +140,10 @@
         <mxCell id="AoCoQu6prM5rvgDSaoBa-43" parent="1" style="whiteSpace=wrap;html=1;fillColor=none;gradientColor=none;rounded=0;" value="Final Payout" vertex="1">
           <mxGeometry height="60" width="120" x="430" y="1480" as="geometry" />
         </mxCell>
-        <mxCell id="BrDGXuzMlsHVGEdcD0br-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Risk Assessment&lt;/font&gt;" vertex="1">
+        <mxCell id="BrDGXuzMlsHVGEdcD0br-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0050ef;fontColor=#ffffff;strokeColor=#001DBC;" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Risk Assessment&lt;/font&gt;" vertex="1">
           <mxGeometry height="60" width="610" x="480" y="80" as="geometry" />
         </mxCell>
-        <mxCell id="BrDGXuzMlsHVGEdcD0br-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Fraud Detection&lt;/font&gt;" vertex="1">
+        <mxCell id="BrDGXuzMlsHVGEdcD0br-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0050ef;fontColor=#ffffff;strokeColor=#001DBC;" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Fraud Detection&lt;/font&gt;" vertex="1">
           <mxGeometry height="60" width="610" x="2470" y="90" as="geometry" />
         </mxCell>
         <mxCell id="BrDGXuzMlsHVGEdcD0br-4" edge="1" parent="1" source="BrDGXuzMlsHVGEdcD0br-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" value="">
