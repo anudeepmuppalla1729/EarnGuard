@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.1">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.3">
   <diagram name="Page-1" id="b5d-j7go-UxkkZ3RDGL5">
-    <mxGraphModel dx="4080" dy="2575" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
+    <mxGraphModel dx="1632" dy="1030" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -148,15 +148,15 @@
         </mxCell>
         <mxCell id="BrDGXuzMlsHVGEdcD0br-4" edge="1" parent="1" source="BrDGXuzMlsHVGEdcD0br-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" value="">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="2775" y="570" as="targetPoint" />
+            <mxPoint x="2725" y="905" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="BrDGXuzMlsHVGEdcD0br-3" parent="1" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=0;strokeColor=default;fillColor=none;" value="Zone Wise Disruption Detection Pipeline" vertex="1">
-          <mxGeometry height="30" width="230" x="2660" y="320" as="geometry" />
+          <mxGeometry height="30" width="230" x="2610" y="655" as="geometry" />
         </mxCell>
-        <mxCell id="BrDGXuzMlsHVGEdcD0br-8" edge="1" parent="1" source="BrDGXuzMlsHVGEdcD0br-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
+        <mxCell id="BrDGXuzMlsHVGEdcD0br-8" edge="1" parent="1" source="BrDGXuzMlsHVGEdcD0br-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="RuWSRPTTb96W3-EmV3P0-1">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="2775" y="750" as="targetPoint" />
+            <mxPoint x="2725" y="1085" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="BrDGXuzMlsHVGEdcD0br-9" connectable="0" parent="BrDGXuzMlsHVGEdcD0br-8" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Yes" vertex="1">
@@ -164,14 +164,17 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-26" edge="1" parent="1" source="BrDGXuzMlsHVGEdcD0br-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RuWSRPTTb96W3-EmV3P0-25" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="BrDGXuzMlsHVGEdcD0br-5" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="Detects Any Disruptions In Next Interval " vertex="1">
-          <mxGeometry height="100" width="125" x="2712.5" y="500" as="geometry" />
+          <mxGeometry height="100" width="125" x="2662.5" y="835" as="geometry" />
         </mxCell>
         <mxCell id="BrDGXuzMlsHVGEdcD0br-10" edge="1" parent="1" source="BrDGXuzMlsHVGEdcD0br-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="BrDGXuzMlsHVGEdcD0br-12">
           <mxGeometry relative="1" as="geometry">
             <Array as="points" />
-            <mxPoint x="2980" y="620" as="sourcePoint" />
-            <mxPoint x="3020" y="550" as="targetPoint" />
+            <mxPoint x="2930" y="955" as="sourcePoint" />
+            <mxPoint x="2970" y="885" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="BrDGXuzMlsHVGEdcD0br-11" connectable="0" parent="BrDGXuzMlsHVGEdcD0br-10" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="No" vertex="1">
@@ -179,8 +182,96 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-30" edge="1" parent="1" source="BrDGXuzMlsHVGEdcD0br-12" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" target="RuWSRPTTb96W3-EmV3P0-28">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="BrDGXuzMlsHVGEdcD0br-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Wait For Any Manual Claim" vertex="1">
-          <mxGeometry height="60" width="120" x="3000" y="520" as="geometry" />
+          <mxGeometry height="60" width="120" x="2950" y="855" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-4" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RuWSRPTTb96W3-EmV3P0-3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Disruption Risk% Calculation" vertex="1">
+          <mxGeometry height="30" width="230" x="2610" y="1085" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-7" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RuWSRPTTb96W3-EmV3P0-6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-8" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="BrDGXuzMlsHVGEdcD0br-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=none;gradientColor=none;rounded=0;" value="&amp;gt; Threshold" vertex="1">
+          <mxGeometry height="100" width="90" x="2680" y="1195" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;gradientColor=none;" value="Schedule For Payment Integration" vertex="1">
+          <mxGeometry height="60" width="145" x="2652.5" y="1395" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-15" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="RuWSRPTTb96W3-EmV3P0-28">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-18" connectable="0" parent="RuWSRPTTb96W3-EmV3P0-15" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Location and Order&amp;nbsp;&lt;div&gt;Validation&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.1467" as="geometry">
+            <mxPoint y="-20" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Platform API" vertex="1">
+          <mxGeometry height="60" width="120" x="3020" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-22" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RuWSRPTTb96W3-EmV3P0-21" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-27" connectable="0" parent="RuWSRPTTb96W3-EmV3P0-22" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="True" vertex="1">
+          <mxGeometry relative="1" x="-0.2817" y="4" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-14" parent="1" style="rhombus;whiteSpace=wrap;html=1;" value="Verify The Claim" vertex="1">
+          <mxGeometry height="110" width="120" x="3325" y="810" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-17" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="RuWSRPTTb96W3-EmV3P0-28">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3470" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-19" connectable="0" parent="RuWSRPTTb96W3-EmV3P0-17" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Weather Related&amp;nbsp;&lt;div&gt;Claim Validation&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.4524" as="geometry">
+            <mxPoint x="15" y="-40" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Waather APi" vertex="1">
+          <mxGeometry height="60" width="120" x="3610" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-21" parent="1" style="whiteSpace=wrap;html=1;" value="" vertex="1">
+          <mxGeometry height="60" width="120" x="3560" y="835" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-25" parent="1" style="whiteSpace=wrap;html=1;" value="Save the Disruption Data For That Interval" vertex="1">
+          <mxGeometry height="60" width="120" x="2370" y="855" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-29" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="RuWSRPTTb96W3-EmV3P0-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Transformer and Rule Based&amp;nbsp;&lt;div&gt;Multiagent Validation System&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="95" width="170" x="3300" y="575" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-35" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RuWSRPTTb96W3-EmV3P0-34" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-38" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="RuWSRPTTb96W3-EmV3P0-16">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3340" y="510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-40" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="RuWSRPTTb96W3-EmV3P0-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Data Source Server" vertex="1">
+          <mxGeometry height="80" width="140" x="2870" y="305" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-37" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="BrDGXuzMlsHVGEdcD0br-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-34" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="Zone Mapping Service" vertex="1">
+          <mxGeometry height="60" width="120" x="2665" y="480" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
