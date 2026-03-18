@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.3">
   <diagram name="Page-1" id="b5d-j7go-UxkkZ3RDGL5">
-    <mxGraphModel dx="3264" dy="2060" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
+    <mxGraphModel dx="1484" dy="936" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -14,12 +14,6 @@
         </mxCell>
         <mxCell id="AoCoQu6prM5rvgDSaoBa-8" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=#005700;fillColor=#008a00;align=center;verticalAlign=middle;rounded=0;fontColor=#ffffff;" value="Weekly Additional Amount Calculation" vertex="1">
           <mxGeometry height="70" width="160" x="235" y="520" as="geometry" />
-        </mxCell>
-        <mxCell id="AoCoQu6prM5rvgDSaoBa-9" edge="1" parent="1" source="AoCoQu6prM5rvgDSaoBa-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="AoCoQu6prM5rvgDSaoBa-12" value="">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="AoCoQu6prM5rvgDSaoBa-10" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=#A50040;fillColor=#d80073;align=center;verticalAlign=middle;rounded=0;fontColor=#ffffff;" value="Real Time Phase" vertex="1">
-          <mxGeometry height="30" width="100" x="855" y="850" as="geometry" />
         </mxCell>
         <mxCell id="AoCoQu6prM5rvgDSaoBa-11" edge="1" parent="1" source="AoCoQu6prM5rvgDSaoBa-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="AoCoQu6prM5rvgDSaoBa-14" value="">
           <mxGeometry relative="1" as="geometry" />
