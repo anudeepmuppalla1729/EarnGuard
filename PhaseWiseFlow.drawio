@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.3">
   <diagram name="Page-1" id="b5d-j7go-UxkkZ3RDGL5">
-    <mxGraphModel dx="1484" dy="936" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
+    <mxGraphModel dx="1498" dy="958" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -330,12 +330,36 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="DGiAZ-gjm_4-WxgnSmk0-25" edge="1" parent="1" source="DGiAZ-gjm_4-WxgnSmk0-12" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="AoCoQu6prM5rvgDSaoBa-17">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="DGiAZ-gjm_4-WxgnSmk0-25" edge="1" parent="1" source="DGiAZ-gjm_4-WxgnSmk0-12" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" target="AoCoQu6prM5rvgDSaoBa-17">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1230" y="235" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="DGiAZ-gjm_4-WxgnSmk0-26" connectable="0" parent="DGiAZ-gjm_4-WxgnSmk0-25" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Platform API (Orders API and&lt;div&gt;&amp;nbsp;Drivers API)&lt;/div&gt;" vertex="1">
           <mxGeometry relative="1" x="0.2986" y="-1" as="geometry">
-            <mxPoint x="-107" y="-57" as="offset" />
+            <mxPoint x="2" y="-11" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-1" edge="1" parent="1" source="DGiAZ-gjm_4-WxgnSmk0-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" target="AoCoQu6prM5rvgDSaoBa-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="875" y="305" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-3" edge="1" parent="1" source="DGiAZ-gjm_4-WxgnSmk0-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;" target="AoCoQu6prM5rvgDSaoBa-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="395" y="360" />
+              <mxPoint x="685" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-4" connectable="0" parent="zDXQUKMP79A58HqjX1jA-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Platform API&lt;div&gt;(Demand Stabity&amp;nbsp;&lt;/div&gt;&lt;div&gt;Of Orders)&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.4035" y="-2" as="geometry">
+            <mxPoint x="2" y="-90" as="offset" />
           </mxGeometry>
         </mxCell>
         <mxCell id="DGiAZ-gjm_4-WxgnSmk0-12" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=#3700CC;fillColor=#6a00ff;align=center;verticalAlign=middle;rounded=0;fontColor=#ffffff;" value="Data Source Server" vertex="1">
@@ -351,6 +375,41 @@
         </mxCell>
         <mxCell id="DGiAZ-gjm_4-WxgnSmk0-16" parent="1" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=0;strokeColor=default;" value="Transformer" vertex="1">
           <mxGeometry height="25" width="97.5" x="266.25" y="385" as="geometry" />
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-2" connectable="0" parent="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Platform API&lt;div&gt;(Median Driver Income&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;)&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry x="870" y="360" as="geometry">
+            <mxPoint x="2" y="-4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-7" edge="1" parent="1" source="zDXQUKMP79A58HqjX1jA-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" target="AoCoQu6prM5rvgDSaoBa-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="733" y="490" />
+              <mxPoint x="733" y="563" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-9" connectable="0" parent="zDXQUKMP79A58HqjX1jA-7" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="City Rank" vertex="1">
+          <mxGeometry relative="1" x="-0.061" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-8" edge="1" parent="1" source="zDXQUKMP79A58HqjX1jA-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" target="AoCoQu6prM5rvgDSaoBa-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="828" y="490" />
+              <mxPoint x="828" y="563" />
+              <mxPoint x="827" y="563" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-10" connectable="0" parent="zDXQUKMP79A58HqjX1jA-8" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Disruption&amp;nbsp;&lt;div&gt;Frequency&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.1176" y="-3" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zDXQUKMP79A58HqjX1jA-5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="City Related Info&amp;nbsp;&lt;div&gt;API&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="100" x="730" y="430" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
