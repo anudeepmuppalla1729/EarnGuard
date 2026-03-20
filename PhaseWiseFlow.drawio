@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.3">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.4">
   <diagram name="Page-1" id="b5d-j7go-UxkkZ3RDGL5">
-    <mxGraphModel dx="1498" dy="958" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
+    <mxGraphModel dx="2140" dy="1369" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -18,6 +18,27 @@
         <mxCell id="AoCoQu6prM5rvgDSaoBa-11" edge="1" parent="1" source="AoCoQu6prM5rvgDSaoBa-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="AoCoQu6prM5rvgDSaoBa-14" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-4" connectable="0" parent="AoCoQu6prM5rvgDSaoBa-11" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Detected Traffic" vertex="1">
+          <mxGeometry relative="1" x="-0.2036" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-1" edge="1" parent="1" source="AoCoQu6prM5rvgDSaoBa-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;" target="AoCoQu6prM5rvgDSaoBa-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-3" connectable="0" parent="9aSqhyMQZm4HyCkhPYwS-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Detected Weather" vertex="1">
+          <mxGeometry relative="1" x="-0.2036" y="-1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-2" edge="1" parent="1" source="AoCoQu6prM5rvgDSaoBa-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" target="AoCoQu6prM5rvgDSaoBa-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-5" connectable="0" parent="9aSqhyMQZm4HyCkhPYwS-2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Detected News&amp;nbsp;&lt;div&gt;Disruptions&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.2196" y="-2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
         <mxCell id="AoCoQu6prM5rvgDSaoBa-12" parent="1" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=0;strokeColor=default;fillColor=none;" value="Zone Wise Disruption Detection Pipeline" vertex="1">
           <mxGeometry height="30" width="230" x="1115" y="850" as="geometry" />
         </mxCell>
@@ -25,7 +46,7 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="AoCoQu6prM5rvgDSaoBa-14" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=#005700;fillColor=#008a00;align=center;verticalAlign=middle;rounded=0;fontColor=#ffffff;" value="Disruption Risk% Calculation" vertex="1">
-          <mxGeometry height="30" width="230" x="1115" y="960" as="geometry" />
+          <mxGeometry height="30" width="230" x="1115" y="1130" as="geometry" />
         </mxCell>
         <mxCell id="AoCoQu6prM5rvgDSaoBa-16" edge="1" parent="1" source="AoCoQu6prM5rvgDSaoBa-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="AoCoQu6prM5rvgDSaoBa-25">
           <mxGeometry relative="1" as="geometry" />
@@ -168,7 +189,7 @@
         <mxCell id="RuWSRPTTb96W3-EmV3P0-4" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RuWSRPTTb96W3-EmV3P0-3" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="RuWSRPTTb96W3-EmV3P0-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Disruption Risk% Calculation" vertex="1">
+        <mxCell id="RuWSRPTTb96W3-EmV3P0-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=#005700;fillColor=#008a00;align=center;verticalAlign=middle;rounded=0;fontColor=#ffffff;" value="Disruption Risk% Calculation" vertex="1">
           <mxGeometry height="30" width="230" x="2610" y="1085" as="geometry" />
         </mxCell>
         <mxCell id="RuWSRPTTb96W3-EmV3P0-8" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="BrDGXuzMlsHVGEdcD0br-12">
