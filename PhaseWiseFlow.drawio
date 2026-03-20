@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.4">
   <diagram name="Page-1" id="b5d-j7go-UxkkZ3RDGL5">
-    <mxGraphModel dx="2140" dy="1369" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
+    <mxGraphModel dx="2996" dy="1916" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5000" pageHeight="5000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -205,6 +205,9 @@
         </mxCell>
         <mxCell id="RuWSRPTTb96W3-EmV3P0-3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=none;gradientColor=none;rounded=0;" value="&amp;gt; Threshold" vertex="1">
           <mxGeometry height="100" width="90" x="2680" y="1195" as="geometry" />
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-8" edge="1" parent="1" source="RuWSRPTTb96W3-EmV3P0-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="9aSqhyMQZm4HyCkhPYwS-7" value="">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="RuWSRPTTb96W3-EmV3P0-6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;gradientColor=none;" value="Schedule For Payment Integration" vertex="1">
           <mxGeometry height="60" width="145" x="2652.5" y="1600" as="geometry" />
@@ -431,6 +434,21 @@
         </mxCell>
         <mxCell id="zDXQUKMP79A58HqjX1jA-5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="City Related Info&amp;nbsp;&lt;div&gt;API&lt;/div&gt;" vertex="1">
           <mxGeometry height="60" width="100" x="730" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-10" edge="1" parent="1" source="9aSqhyMQZm4HyCkhPYwS-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="9aSqhyMQZm4HyCkhPYwS-9" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;gradientColor=none;" value="Payment Accumalation In the Portal" vertex="1">
+          <mxGeometry height="60" width="145" x="2652.5" y="1820" as="geometry" />
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-12" edge="1" parent="1" source="9aSqhyMQZm4HyCkhPYwS-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="9aSqhyMQZm4HyCkhPYwS-11" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-9" parent="1" style="whiteSpace=wrap;html=1;fillColor=none;rounded=0;gradientColor=none;" value="User Withdraw The amount accumalated" vertex="1">
+          <mxGeometry height="60" width="120" x="2665" y="1960" as="geometry" />
+        </mxCell>
+        <mxCell id="9aSqhyMQZm4HyCkhPYwS-11" parent="1" style="whiteSpace=wrap;html=1;fillColor=none;rounded=0;gradientColor=none;" value="Stripe Demo API" vertex="1">
+          <mxGeometry height="60" width="120" x="2665" y="2100" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
