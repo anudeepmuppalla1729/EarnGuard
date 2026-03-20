@@ -30,7 +30,9 @@
 
 7. [Coverage Constraints & Golden Rules](#7-coverage-constraints--golden-rules)  
 
-8. [Key Differentiators](#8-key-differentiators)  
+8. [Key Differentiators](#8-key-differentiators)
+
+9. [Adversarial Defense & Anti-Spoofing Strategy](#9-adversarial-defense--anti-spoofing-strategy)
 
 ---
 
@@ -88,7 +90,7 @@ Scheduled for payment that evening.
 
 #### Scenario C — Karthik, Zepto delivery partner, Bangalore *(fraud attempt blocked)*
 
-Karthik is assigned to a Zepto dark store in Koramangala. He files a manual claim citing a platform outage during Friday evening. The system checks Zepto's platform API logs — no outage is recorded for his zone during that interval. His GPS activity log also shows he was active and completing orders during the claimed period. The multiagent validator flags the claim as invalid across all three checks (platform, weather, location). The claim is **rejected**, Karthik is notified, and the anomaly is logged for future model training.
+Karthik is assigned to a Zepto dark store in Koramangala. He files a manual claim citing a platform outage during Friday evening. The system checks Zepto's platform API logs — no outage is recorded for his zone during that interval. His GPS activity log also shows he was active and completing orders during the claimed period. The multiagent validation flags the claim as invalid across all three checks (platform, weather, location). The claim is **rejected**, Karthik is notified, and the anomaly is logged for future model training.
 
 ---
 
@@ -324,7 +326,6 @@ The admin web portal exposes ML outputs to the insurer team:
 
 ---
 
-
 ## 7. Coverage Constraints & Golden Rules
 
 > ⚠️ These constraints are hard-coded into EarnGuard's product logic and cannot be overridden.
@@ -347,7 +348,150 @@ The admin web portal exposes ML outputs to the insurer team:
 
 ---
 
+## 9. Adversarial Defense & Anti-Spoofing Strategy
 
+> 🚨 **Threat Scenario:** A coordinated ring of 500+ delivery workers uses GPS-spoofing applications to fake their location inside a severe weather zone while they are safely at home — triggering mass parametric payouts and draining the liquidity pool.
 
-*EarnGuard — Guidewire DEVTrails 2026 — Phase 1 Submission*
-*Coverage: Income loss only | Pricing: Weekly | Persona: Q-commerce delivery partners (Zepto, Blinkit)*
+EarnGuard's existing three-layer fraud detection catches individual anomalies. This section documents the **fourth defensive layer** — a dedicated anti-spoofing module designed specifically to defeat coordinated, GPS-based fraud rings.
+
+---
+
+### 9.1 The Differentiation — Genuine Stranding vs. GPS Spoofing
+
+The fundamental insight is that **a spoofed GPS signal is just one data point**. A genuinely stranded delivery partner produces a rich, correlated behavioral fingerprint that a bad actor at home cannot fully replicate. EarnGuard's anti-spoofing layer cross-validates GPS against a portfolio of independent, realistic signals to detect this mismatch.
+
+| Signal Layer | Genuine Stranded Worker | GPS Spoofer at Home |
+|---|---|---|
+| **Platform order activity** | Order acceptance drops to zero — platform confirms no orders dispatched to zone | May still show order activity, or drops suspiciously in sync with all ring members |
+| **Dark store check-in status** | Platform API confirms worker checked in before disruption started | No active check-in record for that shift |
+| **Last active delivery timestamp** | Completed a delivery immediately before disruption — confirms zone presence | Last delivery hours earlier — zone presence unverified |
+| **Accelerometer / motion** | Stationary shelter pattern, short movement bursts consistent with outdoor waiting | Calm indoor pattern inconsistent with being stranded in a storm |
+| **Claim timing & history** | Normal claim frequency; history consistent with zone and schedule | Claim filed in tight cluster with ring members; sudden frequency spike |
+| **Device ID / UPI handle** | Unique device + payout account | May share device ID or UPI handle with other ring members |
+
+The anti-spoofing module computes a **Location Authenticity Score (LAS)** from 0 to 1 by fusing all of the above signals. A GPS coordinate alone contributes only a partial weight to this score.
+
+---
+
+### 9.2 The Data — Specific Signals Beyond Basic GPS
+
+**Platform-side signals (via Platform API — gold standard):**
+- **Order dispatch log** — the platform API records whether orders were dispatched to the worker's zone during the claimed interval. A real disruption drives zone order volume to near-zero. If orders were being dispatched and accepted by others in the same zone while the worker claims disruption, the claim is weakened.
+- **Dark store check-in / check-out timestamps** — platforms log when workers check in and out of their assigned dark store. A valid disruption claim must show the worker was checked in before the disruption started.
+- **Last-confirmed active delivery timestamp** — if the worker completed a delivery seconds before the disruption, physical zone presence is confirmed. If the last delivery was hours prior, presence is unverified.
+
+**Device-level signals (from EarnGuard mobile app):**
+- **Accelerometer / motion patterns** — delivery partners sheltering during a storm show distinct motion signatures: stationary periods, short bursts, vibration consistent with an outdoor environment. A person sitting comfortably at home produces a markedly different, calmer indoor motion profile. This signal is used as a supporting indicator, not a sole determinant.
+
+**Behavioral and historical signals (ML-derived):**
+- **Claim timing clustering** — if a worker's claim is filed within a tight time window shared by many other workers from the same zone, this is a coordinated fraud indicator. Genuine disruptions produce a spread of claim times; rings file in bursts.
+- **Claim frequency spike** — a sudden jump in claim frequency for a worker with no prior claims, or a worker whose frequency is far above their historical baseline, is flagged for elevated scrutiny.
+- **Historical consistency** — the Isolation Forest model (Layer 3) is trained on each worker's own history. A claim pattern that is anomalous relative to that worker's personal baseline scores higher for fraud risk.
+
+**Population-level signals (ring detection):**
+- **Simultaneous claim spike detection** — the system monitors new claims per zone per 10-minute window. If the arrival rate exceeds 3× the historical baseline for that zone, a ring alert fires to the admin portal.
+- **Co-claim graph clustering** — a graph is built where each node is a worker and edges connect workers who filed claims in the same zone within the same 30-minute window, across all historical events. Tightly connected communities (detected using the Louvain method) with elevated anomaly scores are flagged as probable rings. This runs as a batch job every 15 minutes during active disruption events.
+- **Device ID / UPI account overlap** — multiple claims linked to the same device ID or UPI payout handle are flagged as duplicate ring accounts immediately.
+
+---
+
+### 9.3 The UX Balance — Protecting Honest Workers
+
+The most dangerous failure in fraud detection is over-triggering false positives — penalising a genuine worker at the worst moment of their week. EarnGuard's flagging workflow is deliberately tiered to avoid this.
+
+#### Flagging Tiers
+
+```
+LAS Score         │ System Action
+──────────────────┼─────────────────────────────────────────────────────────
+0.85 – 1.00       │ ✅  AUTO-APPROVED  — Payout proceeds normally
+0.60 – 0.84       │ ⏳  SOFT-FLAG      — Payout proceeds; claim tagged for 
+                  │    asynchronous review within 24 hrs. Worker not notified.
+0.35 – 0.59       │ 🔍  HOLD & VERIFY  — Payout paused. Worker sent a 
+                  │    one-tap verification request (see below).
+0.00 – 0.34       │ ❌  HARD-REJECT    — Claim denied. Worker notified with 
+                  │    a plain-language explanation and the option to appeal.
+```
+
+#### The One-Tap Verification Request (for HOLD & VERIFY tier)
+
+When a claim is held, EarnGuard sends the worker a single push notification:
+
+> *"We noticed something unusual during your coverage interval. To confirm your payout of Rs. X, please tap below and share your approximate location for 30 seconds."*
+
+This does **not** ask the worker to call anyone, upload documents, or navigate a claims portal. It requests a brief live check that cross-validates against platform check-in data and motion patterns. The result is processed immediately and the payout is either released or escalated to human review.
+
+Workers have **4 hours** to respond before the claim times out — fully accounting for a genuine worker sheltering with degraded connectivity during the disruption.
+
+#### Network Drop Handling
+
+Bad weather inherently degrades mobile connectivity. EarnGuard handles this explicitly:
+
+- If the worker was confirmed in the disrupted zone before the network drop (via dark store check-in and last delivery timestamp), that pre-drop evidence is carried forward to support the claim.
+- A connectivity gap during a confirmed disruption interval does **not** itself trigger a flag — it is expected behavior. Only a connectivity gap combined with other anomalies (unusual motion pattern, platform order activity continuing, no check-in record) raises the flag.
+- Workers who time out on the verification request due to genuine network issues are automatically escalated to a **human review queue** — not auto-rejected. A human reviewer in the admin portal examines the full evidence trace and can approve the claim manually within 24 hours.
+
+#### Appeals
+
+Any rejected claim can be appealed via a simple in-app flow. The worker submits one piece of supporting evidence (a photo, platform app screenshot, or brief text explanation). Appeals are reviewed by the ops team within 48 hours and approved claims are paid out with no penalty to the worker's account history.
+
+---
+
+### 9.4 Ring Detection — Coordinated Fraud at Scale
+
+Individual worker-level detection catches isolated spoofers. Defeating a coordinated ring of 500 requires a population-level view.
+
+**The Ring Detection Pipeline (runs every 15 minutes during active disruption events):**
+
+1. **Claim burst monitor** — if claim arrivals from a single zone exceed 3× the historical baseline within a 10-minute window, an alert is raised to the admin portal automatically.
+
+2. **Co-claim graph analysis** — communities of workers who consistently file together, identified via Louvain clustering on the co-claim graph, are flagged as probable rings when their aggregate anomaly score is above threshold.
+
+3. **Mass hold trigger** — when a probable ring is detected, all pending claims from that cluster move to HOLD simultaneously. Workers who pass the one-tap verification are released to payout; others are escalated to manual review.
+
+4. **Ring evidence package** — the admin portal auto-generates an evidence report for the flagged cluster: member list, claim timestamps, LAS scores, co-claim graph visualisation, and device/UPI overlap. Designed for internal remediation and, if needed, handoff to the platform partner.
+
+5. **Model feedback loop** — confirmed ring fraud events are fed back into the Isolation Forest retraining pipeline, continuously sharpening anomaly detection against evolving tactics.
+
+---
+
+### 9.5 Architectural Summary
+
+```
+Claim arrives (auto-trigger or manual)
+        │
+        ▼
+[Existing Layer 1]  Duplicate check
+        │
+        ▼
+[Existing Layer 2]  Multiagent validation (Platform API + Weather API + logs)
+        │
+        ▼
+[Existing Layer 3]  Isolation Forest anomaly score
+        │
+        ▼
+[NEW Layer 4]  Anti-Spoofing Module
+   ├── Platform signals: order dispatch log, dark store check-in,
+   │   last active delivery timestamp
+   ├── Device signals: accelerometer / motion pattern (supporting indicator)
+   ├── Behavioral signals: claim timing cluster, frequency spike,
+   │   historical consistency
+   ├── Population signals: claim burst monitor, co-claim graph
+   │   clustering (Louvain), device ID / UPI overlap
+   └── → Compute Location Authenticity Score (LAS)
+        │
+        ┌────────────────────────────────────┐
+        │  LAS ≥ 0.85  → Auto-approve        │
+        │  LAS 0.60–0.84 → Soft-flag, pay    │
+        │  LAS 0.35–0.59 → Hold + verify     │
+        │  LAS < 0.35  → Reject + appeal     │
+        └────────────────────────────────────┘
+```
+
+> **Design principle:** The anti-spoofing layer is additive — it does not replace or short-circuit the three existing fraud layers. Every claim still passes all four layers. The LAS score is one input to the final decision, not the sole determinant. This prevents the new layer from becoming a single point of failure or over-penalising genuine workers.
+
+---
+
+*EarnGuard — Guidewire DEVTrails 2026 — Phase 1 Submission*  
+*Coverage: Income loss only | Pricing: Weekly | Persona: Q-commerce delivery partners (Zepto, Blinkit)*  
+*Anti-spoofing layer added: March 2026 — in response to coordinated GPS fraud threat*
