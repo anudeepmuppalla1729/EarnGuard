@@ -214,9 +214,9 @@ A parametric trigger is an **objective, externally verifiable event** that autom
 
 | Trigger Type | Signal Source | Example Condition | Auto-Payout? |
 |---|---|---|---|
-| Environmental | Weather API (IMD / OpenWeatherMap) | Heavy rain > 50mm/hr for 3+ hrs in zone | ✅ Yes |
-| Social disruption | News NLP model (headlines, social signals) | Strike or curfew detected in delivery zone | ✅ Yes |
-| Platform outage | Platform API (order drop rate, app status) | Order volume drops >60% in zone for 2 hrs | ✅ Yes |
+| Environmental | Weather API (IMD / OpenWeatherMap) | Heavy rain > 50mm/hr for 3+ hrs in zone | Yes |
+| Social disruption | News NLP model (headlines, social signals) | Strike or curfew detected in delivery zone | Yes |
+| Platform outage | Platform API (order drop rate, app status) | Order volume drops >60% in zone for 2 hrs | Yes |
 | Manual claim | Worker submission via app | Worker reports income loss manually | After validation |
 
 > All parametric triggers are subject to a **risk threshold check**. A disruption risk score below the configured threshold is stored for monitoring but does not trigger a payout — ensuring the system only pays out on material disruption events that genuinely halted worker activity. When triggered, the payout covers the income lost during that specific interval only.
@@ -404,12 +404,12 @@ The most dangerous failure in fraud detection is over-triggering false positives
 ```
 LAS Score         │ System Action
 ──────────────────┼─────────────────────────────────────────────────────────
-0.85 – 1.00       │ ✅  AUTO-APPROVED  — Payout proceeds normally
-0.60 – 0.84       │ ⏳  SOFT-FLAG      — Payout proceeds; claim tagged for 
+0.85 – 1.00       │ AUTO-APPROVED  — Payout proceeds normally
+0.60 – 0.84       │ SOFT-FLAG      — Payout proceeds; claim tagged for 
                   │    asynchronous review within 24 hrs. Worker not notified.
-0.35 – 0.59       │ 🔍  HOLD & VERIFY  — Payout paused. Worker sent a 
+0.35 – 0.59       │ HOLD & VERIFY  — Payout paused. Worker sent a 
                   │    one-tap verification request (see below).
-0.00 – 0.34       │ ❌  HARD-REJECT    — Claim denied. Worker notified with 
+0.00 – 0.34       │ HARD-REJECT    — Claim denied. Worker notified with 
                   │    a plain-language explanation and the option to appeal.
 ```
 
