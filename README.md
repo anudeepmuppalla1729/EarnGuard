@@ -1,6 +1,5 @@
 # EarnGuard
 ### AI-Powered Parametric Income Protection for India's Delivery Partners
-**Guidewire DEVTrails 2026 — Phase 1 Submission**
 
 ---
 
