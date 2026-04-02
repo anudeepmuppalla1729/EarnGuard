@@ -6,3 +6,7 @@ xgboost
 joblib
 pydantic
 requests
+numpy
+ipykernel
+seaborn
+matplotlib
