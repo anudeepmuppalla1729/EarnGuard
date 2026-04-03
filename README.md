@@ -156,11 +156,11 @@ Gig workers are paid **weekly** by their platforms. Monthly or annual insurance 
 Total Weekly Premium  =  City-Tier Base Price  +  Weekly Risk Additional Amount
 
 Where:
-  City-Tier Base Price   =  f(city rank, median driver income, historical disruption frequency)
-  Weekly Risk Amount     =  weather risk contribution + news/social risk + platform outage risk
+  City-Tier Base Price   =  f(weather, demand, income context) (Predicted via XGBoost ML Model)
+  Weekly Risk Amount     =  weather risk contribution + news/social risk + platform outage risk (Generated via Gemini LLM & Pricing Engine)
 ```
 
-The city-tier base reflects **structural risk** — a metro city like Mumbai with high flood frequency is priced differently from a Tier-2 city. The weekly risk addition layer responds to the specific signals observed that week.
+The **City-Tier Base Price** is predicted using an XGBoost model that reflects structural and historical risk features. The **Weekly Risk Additional Amount** reacts dynamically to specific signals observed for the upcoming week, calculated using Gemini-based NLP risk assessment and a deterministic pricing engine.
 
 ---
 
@@ -255,23 +255,23 @@ AI and ML are not bolt-ons in EarnGuard — they are the **core engine** of the 
 
 ### 5.1 ML Components Overview
 
-| Component | Model Type | Inputs | Output |
-|---|---|---|---|
-| Premium ML model | Gradient-boosted regression (XGBoost) | City rank, zone risk score, persona, historical loss rate | Weekly premium amount (Rs.) |
-| Disruption scorer | Fine-tuned multi-input Transformer | Weather severity, traffic congestion, platform signals | Zone risk score 0–1 + estimated disruption duration (hrs) |
-| News NLP model | BERT-based text classifier | News headlines, social media alerts, govt bulletins | Disruption type + severity label |
-| Fraud / anomaly detector | Isolation Forest + rule-based layer | Claim history, location data, platform order logs, weather match | Fraud score 0–1 + accept/reject |
-| Model health monitor | Statistical drift detection | Live prediction distributions vs. training baseline | Drift alert + retrain trigger |
+| Component | Model Type | Inputs | Output | Status |
+|---|---|---|---|---|
+| City Base Price Model | Gradient-boosted regression (XGBoost) | Historical weather, demand, and income context data | City-tier base price (Rs.) | Implemented |
+| Weekly Risk Assessor | Large Language Model (Gemini 2.5 Flash) | Real-time weather, platform status, local news snippets | Disruption type, severity score (0-1) | Implemented |
+| Weekly Pricing Engine | Deterministic Algorithm | Base price, generated risk scores, configuration | Weekly Risk Additional Amount (Rs.) | Implemented |
+| Fraud / anomaly detector | Isolation Forest + rule-based layer | Claim history, location data, platform order logs, weather match | Fraud score 0–1 + accept/reject | Planned |
+| Model health monitor | Statistical drift detection | Live prediction distributions vs. training baseline | Drift alert + retrain trigger | Planned |
 
 ---
 
 ### 5.2 Premium Calculation — ML Workflow
 
-1. Raw data is collected from Weather API, Platform API, News API, and driver activity data once a week (Sunday evening for the coming week).
-2. The **Transformer layer** normalises and structures the signals into feature vectors per zone.
-3. The **NLP model** processes news headlines and classifies them as Environmental, Social, or Platform disruptions with a probability score.
-4. All features are fed into the **premium ML model** (XGBoost). Output is a recommended weekly premium in Rs.
-5. The city-tier base price (rule-based, keyed on static city rank data) is added to give the total weekly premium shown to the worker.
+1. Historical data is processed and a base price is computed using the **XGBoost City Base Price Model**.
+2. Raw real-time data is collected (Weather, News, Platform Signals) for the coming week.
+3. The **Gemini Risk Assessor LLM** processes these signals and classifies disruptions, generating a structured risk assessment with quantitative scores (0 to 1).
+4. The **Weekly Pricing Engine** combines the risk score with base pricing rules to compute the final Weekly Risk Additional Amount.
+5. The **Total Weekly Premium** is the sum of the predicted base price and the risk additional amount.
 
 ---
 
@@ -315,7 +315,7 @@ The admin web portal exposes ML outputs to the insurer team:
 | Mobile app (worker) | React Native (Android + iOS) | EarnGuard worker app |
 | Admin web portal | React + Vite, TailwindCSS | Insurer / ops dashboard |
 | Backend API | Node.js / Express | Business logic, orchestration, REST API |
-| ML services | Python: scikit-learn, XGBoost, HuggingFace Transformers | Premium model, NLP classifier, anomaly detection |
+| ML services | Python (FastAPI), scikit-learn, XGBoost, Google Gemini 2.5 Flash API | Base price prediction, NLP risk assessment, API routing |
 | Database | PostgreSQL (structured data), Redis (caching / queues) | Worker profiles, claims, premiums, zone events |
 | External APIs | OpenWeatherMap / IMD (mock), NewsAPI (mock), Platform API (mock) | Weather, news, platform signal ingestion |
 | Payment | Stripe sandbox / Razorpay mock | Payout processing, UPI integration |
