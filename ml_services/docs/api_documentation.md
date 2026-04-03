@@ -78,6 +78,79 @@ The endpoint responds with a successful status representation and the computed p
 
 ---
 
+### `POST /calculate-weekly-price`
+
+Calculate a risk-adjusted weekly additional price mapping for a specific city utilizing Google's Gemini LLM based on weather, unstructured news, and outages.
+
+#### **Request Headers**
+
+- `Content-Type: application/json`
+
+#### **Request Body**
+
+The endpoint expects a JSON payload containing weather metrics, news summary strings, and system outage counts alongside a base price.
+
+**Schema (`WeeklyPriceRequest`):**
+
+```json
+{
+  "city_id": 101,
+  "city": "Hyderabad",
+  "base_price": 500.0,
+  "weather": {
+    "rainfall_mm": 120.0,
+    "temperature": 30.0,
+    "extreme_alert": true,
+    "condition": "heavy rain"
+  },
+  "news_summary": "Flood warnings and transport strike expected next week",
+  "outages": {
+    "count": 3,
+    "avg_duration": 2.0
+  }
+}
+```
+
+#### **Response**
+
+The endpoint responds with calculated actuals padding the original `base_price` with extracted reasoning decoded directly by the Gemini LLM.
+
+**Schema (`WeeklyPriceResponse`):**
+
+```json
+{
+  "city_id": 101,
+  "city": "Hyderabad",
+  "base_price": 500.0,
+  "weekly_addition": 130.0,
+  "final_price": 630.0,
+  "increase_pct": 0.26,
+  "risk_scores": {
+    "weather_risk": 0.8,
+    "news_risk": 0.85,
+    "outage_risk": 0.6
+  },
+  "reason": "Heavy rain and transport strike elevate holistic operational risk."
+}
+```
+
+---
+
+### `GET /health`
+
+Provides high-level system checks, primarily performing an active network ping (validating environment variables securely passing tokens to the Google API) to ensure the Gemini LLM interface is available.
+
+#### **Response**
+
+```json
+{
+  "status": "healthy",
+  "gemini_api_connection": "connected"
+}
+```
+
+---
+
 ## Running the Server
 
 To start the API service, navigate to the `ml_services` root directory and activate the virtual environment.
