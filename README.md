@@ -162,6 +162,8 @@ Where:
 
 The **City-Tier Base Price** is predicted using an XGBoost model that reflects structural and historical risk features. The **Weekly Risk Additional Amount** reacts dynamically to specific signals observed for the upcoming week, calculated using Gemini-based NLP risk assessment and a deterministic pricing engine.
 
+> **Architectural Note:** To prevent fragmenting market features, the ML Pricing engines (XGBoost/Gemini) calculate and assign premiums universally across the **City** level. However, actual structural Disruption Tracking and Claim Payouts are bound strictly to granular **Zones** (Dark Store geo-fences).
+
 ---
 
 ### 3.3 Payout Formula
