@@ -2,22 +2,34 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { theme } from '../theme/theme';
 import { s, vs, ms } from '../theme/responsive';
-import { ShieldCheck, Cloud, PlaneTakeoff, Thermometer, ShoppingBag, Wind, ChevronRight } from 'lucide-react-native';
+import { ShieldCheck, Cloud, AlertTriangle, Zap, ChevronRight } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { SharedHeader } from '../components/SharedHeader';
 import { HapticAction } from '../components/HapticAction';
+import { useClaimsStore } from '../store/claimsStore';
+import { getDisruptionLabel, formatDate } from '../api/mockData';
+
+const ICON_MAP: Record<string, React.ReactNode> = {
+  'HEAVY_RAIN': <Cloud size={s(18)} color={theme.colors.onSurfaceVariant} />,
+  'SYSTEM_TRIGGER': <Zap size={s(18)} color={theme.colors.onSurfaceVariant} />,
+  'SOCIAL_DISRUPTION': <AlertTriangle size={s(18)} color={theme.colors.onSurfaceVariant} />,
+  'FLOOD': <Cloud size={s(18)} color={theme.colors.onSurfaceVariant} />,
+  'TRAFFIC_CONGESTION': <AlertTriangle size={s(18)} color={theme.colors.onSurfaceVariant} />,
+  'PLATFORM_OUTAGE': <Zap size={s(18)} color={theme.colors.onSurfaceVariant} />,
+};
 
 export default function ClaimsScreen() {
+  const claims = useClaimsStore(s => s.claims);
+  const totalEarned = useClaimsStore(s => s.totalEarned);
+  const isLoading = useClaimsStore(s => s.isLoading);
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
+  const onRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Simulate refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    setRefreshing(true);
+    await useClaimsStore.getState().fetchClaims();
+    setRefreshing(false);
   }, []);
 
   return (
@@ -35,37 +47,48 @@ export default function ClaimsScreen() {
           />
         }
       >
-        {/* Header Section - Static */}
+        {/* Header Section */}
         <View style={styles.headerSection}>
           <Text style={styles.pageTitle}>Claims History</Text>
           <Text style={styles.pageSubtitle}>Detailed overview of your financial protections.</Text>
         </View>
 
-        {/* History Container - Static */}
+        {/* Claims List */}
         <View style={styles.historyContainer}>
           <View style={styles.historyCard}>
-            <Animated.View entering={FadeInUp.delay(100).duration(200)}>
-              <ClaimItem title="₹75 credited" type="Heavy Rain" date="Oct 24, 2023" status="Completed" icon={<Cloud size={s(18)} color={theme.colors.onSurfaceVariant} />} isFirst />
-            </Animated.View>
-            <Animated.View entering={FadeInUp.delay(150).duration(200)}>
-              <ClaimItem title="₹120 credited" type="Flight Delay" date="Oct 18, 2023" status="Completed" icon={<PlaneTakeoff size={s(18)} color={theme.colors.onSurfaceVariant} />} />
-            </Animated.View>
-            <Animated.View entering={FadeInUp.delay(200).duration(200)}>
-              <ClaimItem title="₹45 credited" type="Lightning Storm" date="Oct 12, 2023" status="Completed" icon={<Thermometer size={s(18)} color={theme.colors.onSurfaceVariant} />} />
-            </Animated.View>
-            <Animated.View entering={FadeInUp.delay(250).duration(200)}>
-              <ClaimItem title="₹250 pending" type="Medical Emergency" date="Oct 05, 2023" status="In Review" icon={<ShoppingBag size={s(18)} color={theme.colors.onSurfaceVariant} />} isPending />
-            </Animated.View>
-            <Animated.View entering={FadeInUp.delay(300).duration(200)}>
-              <ClaimItem title="₹30 credited" type="Commute Interruption" date="Sep 28, 2023" status="Completed" icon={<ShieldCheck size={s(18)} color={theme.colors.onSurfaceVariant} />} />
-            </Animated.View>
-            <Animated.View entering={FadeInUp.delay(350).duration(200)}>
-              <ClaimItem title="₹15 credited" type="High Wind Alert" date="Sep 15, 2023" status="Completed" icon={<Wind size={s(18)} color={theme.colors.onSurfaceVariant} />} isLast />
-            </Animated.View>
+            {claims.length === 0 ? (
+              <View style={styles.emptyState}>
+                <ShieldCheck size={s(40)} color={theme.colors.divider} />
+                <Text style={styles.emptyText}>No claims yet. Your protection is active!</Text>
+              </View>
+            ) : (
+              claims.map((claim, index) => {
+                const isPending = claim.status === 'PENDING';
+                const icon = ICON_MAP[claim.disruptionType] || <ShieldCheck size={s(18)} color={theme.colors.onSurfaceVariant} />;
+                const title = isPending
+                  ? `₹${claim.payoutAmount.toFixed(0)} pending`
+                  : `₹${claim.payoutAmount.toFixed(0)} credited`;
+
+                return (
+                  <Animated.View key={claim.id} entering={FadeInUp.delay(100 + index * 50).duration(200)}>
+                    <ClaimItem
+                      title={title}
+                      type={getDisruptionLabel(claim.disruptionType)}
+                      date={formatDate(claim.createdAt)}
+                      status={isPending ? 'In Review' : 'Completed'}
+                      icon={icon}
+                      isFirst={index === 0}
+                      isLast={index === claims.length - 1}
+                      isPending={isPending}
+                    />
+                  </Animated.View>
+                );
+              })
+            )}
           </View>
         </View>
 
-        {/* Summary Card - Static */}
+        {/* Summary Card - Dynamic */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryContent}>
             <View style={[styles.iconCircle, { backgroundColor: theme.colors.successLight }]}>
@@ -73,7 +96,7 @@ export default function ClaimsScreen() {
             </View>
             <View style={styles.summaryTextContainer}>
               <Text style={styles.summaryLabel}>Total Protection Earned</Text>
-              <Text style={styles.summaryValue}>₹535.00</Text>
+              <Text style={styles.summaryValue}>₹{totalEarned.toFixed(2)}</Text>
             </View>
             <Text style={styles.summaryDesc}>
               Your premiums and protection plans have actively secured your earnings throughout this quarter.
@@ -231,8 +254,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: ms(14),
     color: theme.colors.onSurfaceVariant,
-    textAlign: 'center',
+    textAlign: 'center' as const,
     lineHeight: ms(20),
     maxWidth: s(260),
+  },
+  emptyState: {
+    padding: s(40),
+    alignItems: 'center' as const,
+    gap: vs(12),
+  },
+  emptyText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: ms(14),
+    color: theme.colors.onSurfaceVariant,
+    textAlign: 'center' as const,
   },
 });

@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { useStore } from '../store';
+import { useAuthStore } from '../store/authStore';
+import { useWalletStore } from '../store/walletStore';
+import { usePolicyStore } from '../store/policyStore';
+import { useClaimsStore } from '../store/claimsStore';
 import { theme } from '../theme/theme';
 import { s, vs, ms } from '../theme/responsive';
-import { apiClient } from '../api/client';
 import { TrendingUp, ShieldCheck, CloudRain, Car, ChevronRight, CreditCard, Shield, Info } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
@@ -18,41 +20,23 @@ import Animated, {
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
-  const { user, fetchProfile } = useStore();
-  const [balance, setBalance] = useState<number>(120.50);
-  const [activePolicy, setActivePolicy] = useState<any>(null);
+  const user = useAuthStore(s => s.user);
+  const balance = useWalletStore(s => s.balance);
+  const activePolicy = usePolicyStore(s => s.activePolicy);
+  const totalEarned = useClaimsStore(s => s.totalEarned);
   const [refreshing, setRefreshing] = useState(false);
   
-  const loadData = async (isManual = false) => {
-    if (isManual) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setRefreshing(true);
-    }
-    
-    await fetchProfile();
-    const balanceRes = await apiClient.wallet.getBalance();
-    if (balanceRes.success) {
-      if (balanceRes.data.balance > balance) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      setBalance(balanceRes.data.balance);
-    }
-    
-    const policiesRes = await apiClient.policies.list();
-    if (policiesRes.success) {
-      const active = policiesRes.data.find((p: any) => p.status === 'ACTIVE');
-      setActivePolicy(active);
-    }
+  const onRefresh = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRefreshing(true);
+    await Promise.all([
+      useWalletStore.getState().fetchBalance(),
+      usePolicyStore.getState().fetchPolicies(),
+      useClaimsStore.getState().fetchClaims(),
+      useAuthStore.getState().fetchProfile(),
+    ]);
     setRefreshing(false);
-  };
-
-  useEffect(() => {
-    loadData();
   }, []);
-
-  const onRefresh = useCallback(() => {
-    loadData(true);
-  }, [balance]);
 
   return (
     <View style={styles.container}>
@@ -110,7 +94,7 @@ export default function HomeScreen() {
           <HapticAction onPress={() => navigation.navigate('Policy')} style={styles.policyMinimalCard}>
             <View style={styles.policyInfoRow}>
               <View style={styles.policyMainInfo}>
-                <Text style={styles.policyName}>{activePolicy?.name || 'Income Shield Plus'}</Text>
+                <Text style={styles.policyName}>{'Income Shield Plus'}</Text>
                 <View style={styles.policyStatusRow}>
                   <View style={[styles.statusDot, { backgroundColor: theme.colors.success }]} />
                   <Text style={styles.statusText}>Active</Text>

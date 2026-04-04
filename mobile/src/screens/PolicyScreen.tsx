@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { theme } from "../theme/theme";
 import { s, vs, ms } from "../theme/responsive";
-import { apiClient } from "../api/client";
+import { usePolicyStore } from "../store/policyStore";
 import {
   Shield,
   ShieldCheck,
@@ -102,12 +102,13 @@ export default function PolicyScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setActivating(true);
     try {
-      const res = await apiClient.policies.activate(
-        "pol_shield_plus",
-        "manual_ref",
-      );
-      if (res.success) {
+      // Use a draft policy ID from quota or generate one
+      const draftId = `pol-draft-${selectedTier.toLowerCase()}-${Date.now()}`;
+      const success = await usePolicyStore.getState().activatePolicy(draftId);
+      if (success) {
         Alert.alert("Success", `${selectedTier} Plan Activated!`);
+      } else {
+        Alert.alert("Error", "Activation failed");
       }
     } catch (e) {
       Alert.alert("Error", "Activation failed");
