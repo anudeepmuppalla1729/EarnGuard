@@ -128,10 +128,26 @@ export const disruptionWorker = new Worker(DISRUPTION_QUEUE_NAME, async (job: Jo
             console.log(`[DisruptionWorker] Zone: ${zoneId} | Final Computed Risk: ${finalRisk.toFixed(2)}`);
         }
 
+        // Query recent claims to prevent duplicate payouts in 24 hours
+        const recentClaimsRes = await client.query(`
+            SELECT worker_id 
+            FROM claims 
+            WHERE status = 'APPROVED' 
+              AND disruption_type = 'SYSTEM_TRIGGER'
+              AND created_at > NOW() - INTERVAL '24 hours'
+        `);
+        const duplicateCooldownMap: Record<string, boolean> = {};
+        recentClaimsRes.rows.forEach(r => { duplicateCooldownMap[r.worker_id] = true; });
+
         // Execution & Payout Computation Loop
         for (const worker of activeWorkers) {
             if (!onlineWorkersMap[worker.worker_id]) {
                 console.log(`[DisruptionWorker] Skipping Worker ${worker.worker_id} - Offline/Inactive on platform.`);
+                continue;
+            }
+
+            if (duplicateCooldownMap[worker.worker_id]) {
+                console.log(`[DisruptionWorker] Skipping Worker ${worker.worker_id} - CD (Cooldown period active). Duplicate SYSTEM_TRIGGER claim suppressed.`);
                 continue;
             }
 
