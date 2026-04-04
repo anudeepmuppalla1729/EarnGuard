@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://postgres:050506@localhost:5432/earnguard',
+  connectionString: process.env.DATABASE_URL || 'postgres://postgres:Anudeep%401904@localhost:5432/earnguard',
 });
 
 // Helper to run simple queries
