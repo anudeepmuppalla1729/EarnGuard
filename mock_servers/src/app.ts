@@ -8,202 +8,205 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// In-memory state for mocks
-const state = {
-  cities: {} as Record<string, any>,
-  zones: {} as Record<string, any>
-};
+// Database used for persistent mock state
 
 // --- DATA ACCESS GET ENDPOINTS ---
 
 // GET /weather?cityId=C1
-app.get('/weather', (req, res) => {
+app.get('/weather', async (req, res) => {
   const cityId = req.query.cityId as string;
   if (!cityId) return res.status(400).json({ error: 'cityId is required' });
   
-  const data = state.cities[cityId]?.weather || {
-    cityId,
-    rainfall_mm: 10,
-    temperature: 28,
-    condition: "CLEAR",
-    extreme_alert: false,
-    timestamp: new Date().toISOString()
-  };
-  
-  res.json(data);
+  try {
+    const result = await pool.query('SELECT * FROM mock_weather_states WHERE city_id = $1 ORDER BY timestamp DESC LIMIT 1', [cityId]);
+    if (result.rows.length > 0) {
+      return res.json({ cityId, ...result.rows[0], rainfall_mm: parseFloat(result.rows[0].rainfall_mm), temperature: parseFloat(result.rows[0].temperature) });
+    }
+    res.json({ cityId, rainfall_mm: 10, temperature: 28, condition: "CLEAR", extreme_alert: false, timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // GET /platform?zoneId=Z1
-app.get('/platform', (req, res) => {
+app.get('/platform', async (req, res) => {
   const zoneId = req.query.zoneId as string;
   if (!zoneId) return res.status(400).json({ error: 'zoneId is required' });
   
-  const data = state.zones[zoneId]?.platform || {
-    zoneId,
-    totalOrders: 1000,
-    orderDropPercentage: 5,
-    avgDeliveryTime: 15,
-    status: "NORMAL",
-    timestamp: new Date().toISOString()
-  };
-  
-  res.json(data);
+  try {
+    const result = await pool.query('SELECT * FROM mock_platform_states WHERE zone_id = $1 ORDER BY timestamp DESC LIMIT 1', [zoneId]);
+    if (result.rows.length > 0) {
+      return res.json({ zoneId, ...result.rows[0], orderDropPercentage: parseFloat(result.rows[0].order_drop_percentage), avgDeliveryTime: result.rows[0].avg_delivery_time, totalOrders: result.rows[0].total_orders });
+    }
+    res.json({ zoneId, totalOrders: 1000, orderDropPercentage: 5, avgDeliveryTime: 15, status: "NORMAL", timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// ── Curated mock driver pool (simulates platform database) ──────────────────
-const CURATED_DRIVERS = [
-  { platformWorkerId: 'WORKER-001', name: 'Rahul Verma',   platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z1', rating: 4.8, mobile: '9876543210', monthsActive: 14, avgWeeklyOrders: 87, weeklyEarnings: 9200 },
-  { platformWorkerId: 'WORKER-002', name: 'Priya Singh',   platform: 'BLINKIT', cityId: 'C1', zoneId: 'Z2', rating: 4.9, mobile: '9876543211', monthsActive: 22, avgWeeklyOrders: 102, weeklyEarnings: 11400 },
-  { platformWorkerId: 'WORKER-003', name: 'Anil Kumar',    platform: 'BLINKIT', cityId: 'C1', zoneId: 'Z1', rating: 4.2, mobile: '9876543212', monthsActive: 8,  avgWeeklyOrders: 65, weeklyEarnings: 7800 },
-  { platformWorkerId: 'WORKER-004', name: 'Suresh Babu',   platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z2', rating: 4.6, mobile: '9876543213', monthsActive: 18, avgWeeklyOrders: 93, weeklyEarnings: 10500 },
-  { platformWorkerId: 'WORKER-005', name: 'Deepa Nair',    platform: 'SWIGGY',  cityId: 'C1', zoneId: 'Z1', rating: 4.7, mobile: '9876543214', monthsActive: 31, avgWeeklyOrders: 110, weeklyEarnings: 12300 },
-  { platformWorkerId: 'WORKER-006', name: 'Karthik Rajan', platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z2', rating: 4.5, mobile: '9876543215', monthsActive: 6,  avgWeeklyOrders: 58, weeklyEarnings: 6900 },
-];
-
 // GET /platform/workers/:id
-app.get('/platform/workers/:id', (req, res) => {
+app.get('/platform/workers/:id', async (req, res) => {
   const id = req.params.id;
-  const driver = CURATED_DRIVERS.find(d => d.platformWorkerId === id);
-  if (driver) return res.json(driver);
-  return res.status(404).json({ error: 'Platform worker not found' });
+  try {
+    const result = await pool.query('SELECT platform_worker_id as "platformWorkerId", name, platform, city_id as "cityId", zone_id as "zoneId", rating, mobile, is_online FROM platform_workers WHERE platform_worker_id = $1', [id]);
+    if (result.rows.length > 0) return res.json(result.rows[0]);
+    res.status(404).json({ error: 'Platform worker not found' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // POST /platform/workers/lookup  — auto-assign worker ID by email + mobile
-// This simulates the platform API resolving a gig-worker identity without
-// requiring the user to know their own worker ID.
-app.post('/platform/workers/lookup', (req, res) => {
+// This simulates the platform API resolving a gig-worker identity
+app.post('/platform/workers/lookup', async (req, res) => {
   const { email, mobile } = req.body as { email?: string; mobile?: string };
-
   if (!email || !mobile) {
     return res.status(400).json({ error: 'email and mobile are required' });
   }
 
-  // Deterministically pick a curated driver based on the last digit of mobile
-  // so the same mobile always resolves to the same profile (stable for demo)
-  const lastDigit = parseInt(mobile.slice(-1), 10);
-  const driver = CURATED_DRIVERS[lastDigit % CURATED_DRIVERS.length];
-
-  // Return the curated profile — the platform "assigned" their worker ID
-  return res.json({
-    ...driver,
-    email, // echo back so caller can verify
-    resolvedAt: new Date().toISOString(),
-  });
+  try {
+    const result = await pool.query('SELECT platform_worker_id as "platformWorkerId", name, platform, city_id as "cityId", zone_id as "zoneId", rating, mobile FROM platform_workers WHERE mobile = $1', [mobile]);
+    if (result.rows.length > 0) {
+       return res.json({ ...result.rows[0], email, resolvedAt: new Date().toISOString() });
+    }
+    
+    const lastDigit = parseInt(mobile.slice(-1), 10) || 1;
+    const allWorkers = await pool.query('SELECT platform_worker_id as "platformWorkerId", name, platform, city_id as "cityId", zone_id as "zoneId", rating, mobile FROM platform_workers ORDER BY platform_worker_id');
+    const driver = allWorkers.rows[lastDigit % allWorkers.rows.length];
+    return res.json({ ...driver, email, resolvedAt: new Date().toISOString() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // POST /platform/active-workers?zoneId=Z1
-app.post('/platform/active-workers', (req, res) => {
+app.post('/platform/active-workers', async (req, res) => {
   const zoneId = req.query.zoneId as string;
   const workerIds = req.body.workerIds as string[];
   
   if (!zoneId) return res.status(400).json({ error: 'zoneId is required' });
   if (!Array.isArray(workerIds)) return res.status(400).json({ error: 'Body must contain an array of workerIds' });
 
-  // Mocking 80% of workers being currently "Online" navigating the platform natively
-  const onlineWorkerIds = workerIds.filter(() => Math.random() < 0.80);
-  
-  res.json({
-    zoneId,
-    onlineWorkerIds,
-    timestamp: new Date().toISOString()
-  });
+  try {
+    const result = await pool.query('SELECT platform_worker_id FROM platform_workers WHERE zone_id = $1 AND platform_worker_id = ANY($2)', [zoneId, workerIds]);
+    const validWorkerIds = result.rows.map(r => r.platform_worker_id);
+    
+    // Mocking 80% of workers being currently "Online" navigating the platform natively
+    const onlineWorkerIds = validWorkerIds.filter(() => Math.random() < 0.80);
+    
+    res.json({ zoneId, onlineWorkerIds, timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // GET /news?cityId=C1
-app.get('/news', (req, res) => {
+app.get('/news', async (req, res) => {
   const cityId = req.query.cityId as string;
   if (!cityId) return res.status(400).json({ error: 'cityId is required' });
   
-  const data = state.cities[cityId]?.news || {
-    cityId,
-    headline: "Normal day in the city",
-    riskTag: "NONE",
-    confidence: 0.9,
-    timestamp: new Date().toISOString()
-  };
+  try {
+    const result = await pool.query('SELECT * FROM mock_news_states WHERE city_id = $1 ORDER BY timestamp DESC LIMIT 1', [cityId]);
+    if (result.rows.length > 0) {
+      return res.json({ cityId, headline: result.rows[0].headline, riskTag: result.rows[0].risk_tag, confidence: parseFloat(result.rows[0].confidence), events: result.rows[0].events, timestamp: result.rows[0].timestamp });
+    }
+    res.json({ cityId, headline: "Normal day in the city", riskTag: "NONE", confidence: 0.9, timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /platform/outages?city=C1
+app.get('/platform/outages', async (req, res) => {
+  const cityId = (req.query.cityId || req.query.city) as string;
+  if (!cityId) return res.status(400).json({ error: 'city is required' });
   
-  res.json(data);
+  try {
+    const result = await pool.query('SELECT * FROM mock_platform_outages WHERE city_id = $1 ORDER BY timestamp DESC LIMIT 1', [cityId]);
+    if (result.rows.length > 0) {
+        return res.json({ metadata: { total_count: result.rows[0].total_count, avg_duration_hours: parseFloat(result.rows[0].avg_duration_hours) } });
+    }
+    res.json({ metadata: { total_count: 0, avg_duration_hours: 0 } });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // GET /traffic?zoneId=Z1
-app.get('/traffic', (req, res) => {
+app.get('/traffic', async (req, res) => {
   const zoneId = req.query.zoneId as string;
   if (!zoneId) return res.status(400).json({ error: 'zoneId is required' });
   
-  const data = state.zones[zoneId]?.traffic || {
-    trafficRiskScore: 0.1,
-    avgSpeed: 45,
-    incidentCount: 0,
-    severityLevel: "LOW",
-    timestamp: new Date().toISOString()
-  };
-  
-  res.json(data);
+  try {
+    const result = await pool.query('SELECT * FROM mock_traffic_states WHERE zone_id = $1 ORDER BY timestamp DESC LIMIT 1', [zoneId]);
+    if (result.rows.length > 0) {
+      const row = result.rows[0];
+      return res.json({ zoneId, trafficRiskScore: parseFloat(row.traffic_risk_score), avgSpeed: row.avg_speed, incidentCount: row.incident_count, severityLevel: row.severity_level, timestamp: row.timestamp });
+    }
+    res.json({ trafficRiskScore: 0.1, avgSpeed: 45, incidentCount: 0, severityLevel: "LOW", timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // --- ADMIN CONTROL POST ENDPOINTS ---
 
-app.post('/admin/weather', (req, res) => {
+app.post('/admin/weather', async (req, res) => {
   const { cityId, rainfall_mm, condition, extreme_alert, temperature } = req.body;
-  if (!state.cities[cityId]) state.cities[cityId] = {};
-  
-  state.cities[cityId].weather = {
-    cityId,
-    rainfall_mm: rainfall_mm ?? 150,
-    condition: condition ?? "HEAVY_RAIN",
-    extreme_alert: extreme_alert ?? true,
-    temperature: temperature ?? 25,
-    timestamp: new Date().toISOString()
-  };
-  
-  res.json({ success: true, updated: state.cities[cityId].weather });
+  try {
+    const result = await pool.query(
+      `INSERT INTO mock_weather_states (city_id, rainfall_mm, temperature, condition, extreme_alert) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [cityId, rainfall_mm ?? 150, temperature ?? 25, condition ?? "HEAVY_RAIN", extreme_alert ?? true]
+    );
+    res.json({ success: true, updated: result.rows[0] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post('/admin/platform', (req, res) => {
+app.post('/admin/platform', async (req, res) => {
   const { zoneId, orderDropPercentage, avgDeliveryTime, status } = req.body;
-  if (!state.zones[zoneId]) state.zones[zoneId] = {};
-  
-  state.zones[zoneId].platform = {
-    zoneId,
-    orderDropPercentage: orderDropPercentage ?? 80,
-    avgDeliveryTime: avgDeliveryTime ?? 45,
-    status: status ?? "DEGRADED",
-    totalOrders: 1200,
-    timestamp: new Date().toISOString()
-  };
-  
-  res.json({ success: true, updated: state.zones[zoneId].platform });
+  try {
+    const result = await pool.query(
+      `INSERT INTO mock_platform_states (zone_id, total_orders, order_drop_percentage, avg_delivery_time, status) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [zoneId, 1200, orderDropPercentage ?? 80, avgDeliveryTime ?? 45, status ?? "DEGRADED"]
+    );
+    res.json({ success: true, updated: result.rows[0] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post('/admin/news', (req, res) => {
+app.post('/admin/news', async (req, res) => {
   const { cityId, headline, riskTag } = req.body;
-  if (!state.cities[cityId]) state.cities[cityId] = {};
   
-  state.cities[cityId].news = {
-    cityId,
-    headline: headline ?? "City-wide strike announced",
-    riskTag: riskTag ?? "SOCIAL_DISRUPTION",
-    confidence: 0.95,
-    timestamp: new Date().toISOString()
-  };
-  
-  res.json({ success: true, updated: state.cities[cityId].news });
+  const events = headline ? JSON.stringify([{ title: headline }]) : JSON.stringify([{ title: "City-wide strike announced" }]);
+  try {
+    const result = await pool.query(
+      `INSERT INTO mock_news_states (city_id, headline, risk_tag, confidence, events) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [cityId, headline ?? "City-wide strike announced", riskTag ?? "SOCIAL_DISRUPTION", 0.95, events]
+    );
+    res.json({ success: true, updated: result.rows[0] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post('/admin/traffic', (req, res) => {
+app.post('/admin/traffic', async (req, res) => {
   const { zoneId, trafficRiskScore, avgSpeed, incidentCount, severityLevel } = req.body;
-  if (!state.zones[zoneId]) state.zones[zoneId] = {};
-  
-  state.zones[zoneId].traffic = {
-    zoneId,
-    trafficRiskScore: trafficRiskScore ?? 0.8,
-    avgSpeed: avgSpeed ?? 10,
-    incidentCount: incidentCount ?? 1,
-    severityLevel: severityLevel ?? "SEVERE",
-    timestamp: new Date().toISOString()
-  };
-  
-  res.json({ success: true, updated: state.zones[zoneId].traffic });
+  try {
+    const result = await pool.query(
+      `INSERT INTO mock_traffic_states (zone_id, traffic_risk_score, avg_speed, incident_count, severity_level) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [zoneId, trafficRiskScore ?? 0.8, avgSpeed ?? 10, incidentCount ?? 1, severityLevel ?? "SEVERE"]
+    );
+    res.json({ success: true, updated: result.rows[0] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // App Entry Point Hook

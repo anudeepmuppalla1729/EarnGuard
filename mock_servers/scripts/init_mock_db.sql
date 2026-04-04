@@ -65,6 +65,15 @@ CREATE TABLE IF NOT EXISTS mock_traffic_states (
     timestamp TIMESTAMP DEFAULT NOW()
 );
 
+-- 6.5 Platform Outages
+CREATE TABLE IF NOT EXISTS mock_platform_outages (
+    id SERIAL PRIMARY KEY,
+    city_id TEXT REFERENCES mock_cities(city_id),
+    total_count INTEGER DEFAULT 0,
+    avg_duration_hours NUMERIC(4,1) DEFAULT 0.0,
+    timestamp TIMESTAMP DEFAULT NOW()
+);
+
 -- 7. News States
 CREATE TABLE IF NOT EXISTS mock_news_states (
     id SERIAL PRIMARY KEY,
@@ -72,6 +81,7 @@ CREATE TABLE IF NOT EXISTS mock_news_states (
     headline TEXT DEFAULT 'Normal day in the city',
     risk_tag TEXT DEFAULT 'NONE',
     confidence NUMERIC(3,2) DEFAULT 0.9,
+    events JSONB DEFAULT '[]'::jsonb,
     timestamp TIMESTAMP DEFAULT NOW()
 );
 
@@ -92,10 +102,23 @@ VALUES
 ('WORKER-005', 'Z1', 'C1', 'SWIGGY', 'Deepa Nair', '9876543214', 'Scooter', 4.7),
 ('WORKER-006', 'Z2', 'C1', 'ZEPTO', 'Karthik Rajan', '9876543215', 'Bike', 4.5);
 
--- Initial States (Z1 Safe, Z2 Risky example setup)
-INSERT INTO mock_weather_states (city_id, rainfall_mm, condition) VALUES ('C1', 0, 'CLEAR');
-INSERT INTO mock_traffic_states (zone_id, traffic_risk_score, severity_level) VALUES ('Z1', 0.1, 'LOW');
-INSERT INTO mock_traffic_states (zone_id, traffic_risk_score, severity_level) VALUES ('Z2', 0.8, 'HIGH');
-INSERT INTO mock_news_states (city_id) VALUES ('C1');
-INSERT INTO mock_platform_states (zone_id) VALUES ('Z1');
-INSERT INTO mock_platform_states (zone_id, order_drop_percentage, status) VALUES ('Z2', 85, 'DEGRADED');
+-- Initial States (Z1 Risky, Z2 Safe example setup for ML Demo)
+INSERT INTO mock_weather_states (city_id, rainfall_mm, temperature, condition, extreme_alert) 
+VALUES ('C1', 42.5, 26, 'HEAVY_RAIN', TRUE);
+
+INSERT INTO mock_traffic_states (zone_id, traffic_risk_score, avg_speed, incident_count, severity_level) 
+VALUES ('Z1', 0.75, 15, 3, 'HIGH');
+INSERT INTO mock_traffic_states (zone_id, traffic_risk_score, avg_speed, incident_count, severity_level) 
+VALUES ('Z2', 0.20, 35, 0, 'LOW');
+
+INSERT INTO mock_news_states (city_id, headline, risk_tag, confidence, events) 
+VALUES ('C1', 'Severe waterlogging reported near IT corridors.', 'WEATHER_IMPACT', 0.9, '[{"title": "Waterlogging at Madhapur junction causing severe traffic jams."}, {"title": "BlinkIt dark store experiences localized power outage."}]'::jsonb);
+
+INSERT INTO mock_platform_states (zone_id, total_orders, order_drop_percentage, avg_delivery_time, status) 
+VALUES ('Z1', 1540, 15, 42, 'DEGRADED');
+INSERT INTO mock_platform_states (zone_id, total_orders, order_drop_percentage, avg_delivery_time, status) 
+VALUES ('Z2', 1100, 4, 22, 'NORMAL');
+
+INSERT INTO mock_platform_outages (city_id, total_count, avg_duration_hours)
+VALUES ('C1', 2, 1.5);
+

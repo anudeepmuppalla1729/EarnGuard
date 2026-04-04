@@ -15,7 +15,8 @@ def load_gemini():
     global client
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        logger.warning("GOOGLE_API_KEY not found in environment variables.")
+        logger.warning("GOOGLE_API_KEY not found in environment variables. Gemini SDK will NOT be initialized.")
+        return
     
     try:
         # Initialize client. The SDK uses GOOGLE_API_KEY if passed, 
