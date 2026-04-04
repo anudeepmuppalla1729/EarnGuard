@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import { pool } from './db';
 
 const app = express();
 app.use(cors());
@@ -47,6 +48,47 @@ app.get('/platform', (req, res) => {
   };
   
   res.json(data);
+});
+
+// ── Curated mock driver pool (simulates platform database) ──────────────────
+const CURATED_DRIVERS = [
+  { platformWorkerId: 'WORKER-001', name: 'Rahul Verma',   platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z1', rating: 4.8, mobile: '9876543210', monthsActive: 14, avgWeeklyOrders: 87, weeklyEarnings: 9200 },
+  { platformWorkerId: 'WORKER-002', name: 'Priya Singh',   platform: 'BLINKIT', cityId: 'C1', zoneId: 'Z2', rating: 4.9, mobile: '9876543211', monthsActive: 22, avgWeeklyOrders: 102, weeklyEarnings: 11400 },
+  { platformWorkerId: 'WORKER-003', name: 'Anil Kumar',    platform: 'BLINKIT', cityId: 'C1', zoneId: 'Z1', rating: 4.2, mobile: '9876543212', monthsActive: 8,  avgWeeklyOrders: 65, weeklyEarnings: 7800 },
+  { platformWorkerId: 'WORKER-004', name: 'Suresh Babu',   platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z2', rating: 4.6, mobile: '9876543213', monthsActive: 18, avgWeeklyOrders: 93, weeklyEarnings: 10500 },
+  { platformWorkerId: 'WORKER-005', name: 'Deepa Nair',    platform: 'SWIGGY',  cityId: 'C1', zoneId: 'Z1', rating: 4.7, mobile: '9876543214', monthsActive: 31, avgWeeklyOrders: 110, weeklyEarnings: 12300 },
+  { platformWorkerId: 'WORKER-006', name: 'Karthik Rajan', platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z2', rating: 4.5, mobile: '9876543215', monthsActive: 6,  avgWeeklyOrders: 58, weeklyEarnings: 6900 },
+];
+
+// GET /platform/workers/:id
+app.get('/platform/workers/:id', (req, res) => {
+  const id = req.params.id;
+  const driver = CURATED_DRIVERS.find(d => d.platformWorkerId === id);
+  if (driver) return res.json(driver);
+  return res.status(404).json({ error: 'Platform worker not found' });
+});
+
+// POST /platform/workers/lookup  — auto-assign worker ID by email + mobile
+// This simulates the platform API resolving a gig-worker identity without
+// requiring the user to know their own worker ID.
+app.post('/platform/workers/lookup', (req, res) => {
+  const { email, mobile } = req.body as { email?: string; mobile?: string };
+
+  if (!email || !mobile) {
+    return res.status(400).json({ error: 'email and mobile are required' });
+  }
+
+  // Deterministically pick a curated driver based on the last digit of mobile
+  // so the same mobile always resolves to the same profile (stable for demo)
+  const lastDigit = parseInt(mobile.slice(-1), 10);
+  const driver = CURATED_DRIVERS[lastDigit % CURATED_DRIVERS.length];
+
+  // Return the curated profile — the platform "assigned" their worker ID
+  return res.json({
+    ...driver,
+    email, // echo back so caller can verify
+    resolvedAt: new Date().toISOString(),
+  });
 });
 
 // POST /platform/active-workers?zoneId=Z1
@@ -181,6 +223,12 @@ app.get('/market', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+    try {
+        await pool.query('SELECT NOW()');
+        console.log(`[Database] Connected to Mock PostgreSQL Database successfully.`);
+    } catch (err) {
+        console.error(`[Database] Failed to connect to Mock PostgreSQL Database:`, err);
+    }
     console.log(`Mock Simulator Backend running on http://localhost:${PORT}`);
 });
