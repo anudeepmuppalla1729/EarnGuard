@@ -1,14 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/theme';
 import { s, vs, ms } from '../theme/responsive';
 import { ShieldCheck, RefreshCw, Lock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
+import { useAuthStore } from '../store/authStore';
 
 export default function TwoFactorAuthScreen() {
   const navigation = useNavigation<any>();
+  const verifyOtp = useAuthStore(s => s.verifyOtp);
+  const isLoading = useAuthStore(s => s.isLoading);
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const inputs = useRef<Array<TextInput | null>>([]);
 
@@ -32,9 +35,19 @@ export default function TwoFactorAuthScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    navigation.navigate('BiometricSetup');
+    const fullCode = code.join('');
+    if (fullCode.length < 6) {
+      Alert.alert('Error', 'Please enter the full 6-digit code');
+      return;
+    }
+    const success = await verifyOtp(fullCode);
+    if (success) {
+      navigation.navigate('BiometricSetup');
+    } else {
+      Alert.alert('Verification Failed', 'Invalid code. Please try again.');
+    }
   };
 
   return (
@@ -58,7 +71,7 @@ export default function TwoFactorAuthScreen() {
                 {code.map((digit, index) => (
                   <TextInput
                     key={index}
-                    ref={(ref) => (inputs.current[index] = ref)}
+                    ref={(ref) => { inputs.current[index] = ref; }}
                     style={styles.codeInput}
                     value={digit}
                     onChangeText={(text) => handleInputChange(text, index)}

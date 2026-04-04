@@ -3,14 +3,15 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/theme';
 import { s, vs, ms } from '../theme/responsive';
-import { useStore } from '../store';
+import { useAuthStore } from '../store/authStore';
 import { Shield, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
-  const { login, isLoading } = useStore();
+  const login = useAuthStore(s => s.login);
+  const isLoading = useAuthStore(s => s.isLoading);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +24,8 @@ export default function LoginScreen() {
     }
     try {
       await login(email, password);
+      // Navigate to 2FA — login stores token but doesn't set isAuthenticated
+      navigation.navigate('TwoFactorAuth');
     } catch (e) {
       Alert.alert('Login Failed', 'Invalid credentials, please try again.');
     }

@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RootNavigator from './src/navigation/RootNavigator';
+import { AppProvider } from './src/AppProvider';
 import { theme } from './src/theme/theme';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
@@ -44,7 +45,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider onLayout={onLayoutRootView} style={{ backgroundColor: theme.colors.background }}>
         <StatusBar style="dark" />
-        <RootNavigator />
+        <AppProvider>
+          <RootNavigator />
+        </AppProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

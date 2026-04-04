@@ -1,9 +1,12 @@
 import React from "react";
+import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import { useStore } from "../store";
+import { useAuthStore } from "../store/authStore";
 import { CustomTabBar } from "./CustomTabBar";
+import { theme } from "../theme/theme";
+import { vs, ms } from "../theme/responsive";
 
 // Screens
 import WelcomeSplashScreen from "../screens/WelcomeSplashScreen";
@@ -40,8 +43,28 @@ function MainTabs() {
   );
 }
 
+function LoadingScreen() {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={styles.loadingText}>Securing session...</Text>
+    </View>
+  );
+}
+
 export default function RootNavigator() {
-  const { isAuthenticated } = useStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isRestoringSession = useAuthStore((s) => s.isRestoringSession);
+
+  if (isRestoringSession) {
+    return (
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Loading" component={LoadingScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -75,6 +98,14 @@ export default function RootNavigator() {
           <>
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen
+              name="TwoFactorAuth"
+              component={TwoFactorAuthScreen}
+            />
+            <Stack.Screen
+              name="BiometricSetup"
+              component={BiometricAuthSetupScreen}
+            />
+            <Stack.Screen
               name="NotificationSettings"
               component={NotificationSettingsScreen}
             />
@@ -85,3 +116,18 @@ export default function RootNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: theme.colors.background,
+    gap: vs(16),
+  },
+  loadingText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: ms(14),
+    color: theme.colors.onSurfaceVariant,
+  },
+});

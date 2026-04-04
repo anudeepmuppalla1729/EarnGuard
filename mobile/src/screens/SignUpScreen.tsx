@@ -1,23 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/theme';
 import { s, vs, ms } from '../theme/responsive';
 import { Shield, User, Mail, Smartphone, Lock, Eye, EyeOff, ChevronLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
+import { useAuthStore } from '../store/authStore';
 
 export default function SignUpScreen() {
   const navigation = useNavigation<any>();
+  const signup = useAuthStore(s => s.signup);
+  const isLoading = useAuthStore(s => s.isLoading);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    navigation.navigate('TwoFactorAuth');
+    if (!fullName || !email || !password) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+    try {
+      await signup(email, password, fullName);
+      navigation.navigate('TwoFactorAuth');
+    } catch (e: any) {
+      Alert.alert('Sign Up Failed', e?.error?.message || 'Please try again.');
+    }
   };
 
   const handleSignIn = () => {

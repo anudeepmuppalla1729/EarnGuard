@@ -1,23 +1,44 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/theme';
 import { s, vs, ms, SCREEN_HEIGHT } from '../theme/responsive';
 import { Shield, Fingerprint, ScanFace, Lock, ShieldCheck } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useStore } from '../store';
+import { useAuthStore } from '../store/authStore';
+import { BiometricService } from '../services/biometric';
 
 export default function BiometricAuthSetupScreen() {
-  const { login } = useStore();
+  const completeAuth = useAuthStore(s => s.completeAuth);
+  const [isEnabling, setIsEnabling] = useState(false);
 
-  const handleEnableBiometrics = () => {
+  const handleEnableBiometrics = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    login('test@test.com', 'password');
+    setIsEnabling(true);
+    
+    const available = await BiometricService.isAvailable();
+    if (!available) {
+      Alert.alert(
+        'Biometrics Unavailable',
+        'Your device does not support biometric authentication. Proceeding without it.',
+        [{ text: 'OK', onPress: () => completeAuth(false) }]
+      );
+      setIsEnabling(false);
+      return;
+    }
+
+    const success = await BiometricService.authenticate('Verify to enable biometric login');
+    if (success) {
+      await completeAuth(true);
+    } else {
+      Alert.alert('Failed', 'Biometric verification failed. Try again or skip.');
+    }
+    setIsEnabling(false);
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    login('test@test.com', 'password');
+    await completeAuth(false);
   };
 
   return (
