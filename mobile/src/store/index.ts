@@ -1,47 +1,26 @@
-import { create } from 'zustand';
-import { apiClient } from '../api/client';
+// =============================================================
+// Store Barrel — Re-exports all domain stores
+// Backward-compatible useStore wraps useAuthStore
+// =============================================================
+export { useAuthStore } from './authStore';
+export { useWalletStore } from './walletStore';
+export { usePolicyStore } from './policyStore';
+export { useClaimsStore } from './claimsStore';
+export { useNotificationStore } from './notificationStore';
 
-interface AppState {
-  isAuthenticated: boolean;
-  accessToken: string | null;
-  user: any | null;
-  isLoading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
-  logout: () => void;
-  fetchProfile: () => Promise<void>;
-}
+// Backward-compatible useStore for existing imports
+// Maps old interface → new authStore
+import { useAuthStore } from './authStore';
 
-export const useStore = create<AppState>((set) => ({
-  isAuthenticated: false,
-  accessToken: null,
-  user: null,
-  isLoading: false,
-
-  login: async (email, pass) => {
-    set({ isLoading: true });
-    try {
-      const res = await apiClient.auth.login(email, pass);
-      set({ 
-        isAuthenticated: true, 
-        accessToken: res.data.accessToken,
-        isLoading: false 
-      });
-    } catch (e) {
-      set({ isLoading: false });
-      throw e;
-    }
-  },
-
-  logout: () => {
-    set({ isAuthenticated: false, accessToken: null, user: null });
-  },
-
-  fetchProfile: async () => {
-    try {
-      const res = await apiClient.workers.me();
-      set({ user: res.data });
-    } catch (e) {
-      console.error(e);
-    }
-  }
-}));
+export const useStore = () => {
+  const auth = useAuthStore();
+  return {
+    isAuthenticated: auth.isAuthenticated,
+    accessToken: auth.accessToken,
+    user: auth.user,
+    isLoading: auth.isLoading,
+    login: auth.login,
+    logout: auth.logout,
+    fetchProfile: auth.fetchProfile,
+  };
+};
