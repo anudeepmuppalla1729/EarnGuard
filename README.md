@@ -180,8 +180,8 @@ Payout For a Disruption Interval  =  Base Coverage Amount  +  Risk-Adjusted Amou
 Where:
   Interval Loss          =  Zone median income rate (Rs./hr)  ×  Duration of disruption (hrs)
 
-  Base Coverage Amount   =  k  ×  Weekly Premium
-                            (k is a fixed coverage multiplier, e.g. 0.5 – 0.8)
+  Base Coverage Amount   =  k  ×  Interval Loss
+                            (k is a fixed coverage multiplier, e.g. 0.2 – 0.6)
 
   Remaining Loss         =  max(0,  Interval Loss  −  Base Coverage Amount)
 
@@ -194,15 +194,15 @@ Where:
 Zone median income rate  =  Rs. 110 / hr
 Disruption duration      =  6 hours
 Weekly premium           =  Rs. 350
-Coverage multiplier (k)  =  0.6
+Coverage multiplier (k)  =  0.2
 Disruption risk score    =  0.78
 
 Interval Loss            =  110  ×  6             =  Rs. 660
-Base Coverage Amount     =  0.6  ×  350            =  Rs. 210
-Remaining Loss           =  max(0, 660 − 210)      =  Rs. 450
-Risk-Adjusted Amount     =  450  ×  0.78           =  Rs. 351
+Base Coverage Amount     =  0.2  ×  660            =  Rs. 132
+Remaining Loss           =  max(0, 660 − 132)      =  Rs. 528
+Risk-Adjusted Amount     =  528  ×  0.78           =  Rs. 411.84
 
-→ Total Payout           =  210  +  351            =  Rs. 561 for that interval
+→ Total Payout           =  132  +  411.84            =  Rs. 543.84 for that interval
 ```
 
 A worker may receive **multiple interval payouts in a single week** if multiple qualifying disruption events occur. The weekly premium and multiplier `k` are fixed at the start of the coverage week; each qualifying disruption interval within that window triggers its own independent payout calculation.
