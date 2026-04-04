@@ -23,7 +23,6 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
            city_id            AS "cityId",
            status,
            premium_amount     AS "premiumAmount",
-           max_payout         AS "maxPayout",
            coverage_multiplier AS "coverageMultiplier",
            activated_at       AS "activatedAt",
            created_at         AS "createdAt"
@@ -39,7 +38,6 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
     const items = dataRes.rows.map(r => ({
       ...r,
       premiumAmount:       parseFloat(r.premiumAmount),
-      maxPayout:           parseFloat(r.maxPayout),
       coverageMultiplier:  parseFloat(r.coverageMultiplier),
     }));
 
@@ -79,27 +77,22 @@ router.post('/quote', requireAuth, async (req: AuthRequest, res: Response): Prom
         }
     }
 
-    const total_premium = base_price + additional_price;
-
     // Generate 3 Options
     const options = [
       {
         tier: 'BASIC',
-        premium_amount: parseFloat((total_premium * 0.7).toFixed(2)),
-        max_payout: parseFloat((total_premium * 10.0 * 0.6).toFixed(2)),
-        coverage_multiplier: 0.6
+        premium_amount: parseFloat(((base_price * 1.0) + additional_price).toFixed(2)),
+        coverage_multiplier: 0.2
       },
       {
         tier: 'STANDARD',
-        premium_amount: parseFloat(total_premium.toFixed(2)),
-        max_payout: parseFloat((total_premium * 10.0).toFixed(2)),
-        coverage_multiplier: 1.0
+        premium_amount: parseFloat(((base_price * 1.2) + additional_price).toFixed(2)),
+        coverage_multiplier: 0.4
       },
       {
         tier: 'PREMIUM',
-        premium_amount: parseFloat((total_premium * 1.4).toFixed(2)),
-        max_payout: parseFloat((total_premium * 10.0 * 2.0).toFixed(2)),
-        coverage_multiplier: 2.0
+        premium_amount: parseFloat(((base_price * 1.5) + additional_price).toFixed(2)),
+        coverage_multiplier: 0.6
       }
     ];
 
@@ -110,18 +103,17 @@ router.post('/quote', requireAuth, async (req: AuthRequest, res: Response): Prom
       
       // Save draft policy
       await pool.query(`
-          INSERT INTO policies (id, worker_id, city_id, status, premium_amount, max_payout, coverage_multiplier)
-          VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6)
-      `, [policyId, req.workerId, cityId, opt.premium_amount, opt.max_payout, opt.coverage_multiplier]);
+          INSERT INTO policies (id, worker_id, city_id, status, premium_amount, coverage_multiplier)
+          VALUES ($1, $2, $3, 'DRAFT', $4, $5)
+      `, [policyId, req.workerId, cityId, opt.premium_amount, opt.coverage_multiplier]);
 
       quotes.push({
         policyId,
         tier: opt.tier,
         base_price,
-        additional_price: opt.tier === 'STANDARD' ? additional_price : 0, // Only show ML breakdown on standard for simplicity or keep reasoning
+        additional_price: additional_price,
         reason,
-        premium_amount: opt.premium_amount,
-        max_payout: opt.max_payout
+        premium_amount: opt.premium_amount
       });
     }
 
@@ -180,7 +172,15 @@ router.post('/activate', requireAuth, validate(ActivateSchema), async (req: Auth
     `, [policyId]);
 
     await client.query('COMMIT');
-    res.json({ success: true, message: 'Policy activated successfully via mock bank' });
+    res.json({
+      success: true,
+      data: {
+        policyId,
+        status: 'ACTIVE',
+        activatedAt: new Date().toISOString(),
+        bankTransactionId: `TXN-MOCK-${Date.now()}`,
+      },
+    });
   } catch (error: any) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: error.message });

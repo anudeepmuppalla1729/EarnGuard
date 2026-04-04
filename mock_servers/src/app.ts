@@ -70,10 +70,31 @@ app.post('/platform/workers/lookup', async (req, res) => {
        return res.json({ ...result.rows[0], email, resolvedAt: new Date().toISOString() });
     }
     
-    const lastDigit = parseInt(mobile.slice(-1), 10) || 1;
-    const allWorkers = await pool.query('SELECT platform_worker_id as "platformWorkerId", name, platform, city_id as "cityId", zone_id as "zoneId", rating, mobile FROM platform_workers ORDER BY platform_worker_id');
-    const driver = allWorkers.rows[lastDigit % allWorkers.rows.length];
-    return res.json({ ...driver, email, resolvedAt: new Date().toISOString() });
+    // Create new mock driver logic
+    const newPlatformWorkerId = 'WRK-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
+    const name = email.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'New Worker';
+    const platformName = Math.random() > 0.5 ? 'ZEPTO' : 'BLINKIT';
+    const cityId = 'C1';
+    const zoneId = Math.random() > 0.5 ? 'Z1' : 'Z2';
+    const rating = (4.0 + Math.random() * 1.0).toFixed(1);
+
+    await pool.query(
+      `INSERT INTO platform_workers (platform_worker_id, name, platform, city_id, zone_id, rating, mobile, is_online) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [newPlatformWorkerId, name, platformName, cityId, zoneId, rating, mobile, true]
+    );
+
+    return res.json({
+      platformWorkerId: newPlatformWorkerId,
+      name,
+      platform: platformName,
+      cityId,
+      zoneId,
+      rating,
+      mobile,
+      email,
+      resolvedAt: new Date().toISOString()
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -223,6 +244,44 @@ app.get('/market', (req, res) => {
         total_orders_weekly: Math.floor(1000 + Math.random() * 5000),
         holiday_flag: Math.random() > 0.9 ? 1 : 0,
         event_flag: Math.random() > 0.8 ? 1 : 0
+    });
+});
+
+// --- MOCK BANK API ---
+
+// GET /bank/accounts — return list of mock bank accounts for the worker
+app.get('/bank/accounts', (req, res) => {
+    res.json({
+        success: true,
+        accounts: [
+            { id: 'BANK-001', bankName: 'State Bank of India', accountEnding: '4521', type: 'Savings', ifsc: 'SBIN0001234' },
+            { id: 'BANK-002', bankName: 'HDFC Bank', accountEnding: '8734', type: 'Current', ifsc: 'HDFC0005678' },
+            { id: 'BANK-003', bankName: 'ICICI Bank', accountEnding: '1290', type: 'Savings', ifsc: 'ICIC0009012' },
+            { id: 'BANK-004', bankName: 'Axis Bank', accountEnding: '6347', type: 'Savings', ifsc: 'UTIB0003456' },
+        ]
+    });
+});
+
+// POST /bank/pay — simulate a bank debit for premium payment
+app.post('/bank/pay', (req, res) => {
+    const { accountId, amount, reference } = req.body;
+    if (!accountId || !amount) {
+        return res.status(400).json({ success: false, error: 'accountId and amount are required' });
+    }
+    
+    // Simulate processing delay
+    const transactionId = 'TXN-' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 1000);
+    console.log(`[MockBank] Processed payment: ₹${amount} from account ${accountId} | TXN: ${transactionId} | Ref: ${reference || 'N/A'}`);
+    
+    res.json({
+        success: true,
+        transaction: {
+            transactionId,
+            accountId,
+            amount: parseFloat(amount),
+            status: 'COMPLETED',
+            processedAt: new Date().toISOString(),
+        }
     });
 });
 

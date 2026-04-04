@@ -79,7 +79,6 @@ CREATE TABLE IF NOT EXISTS policies (
     city_id TEXT REFERENCES cities(id),
     status TEXT CHECK (status IN ('DRAFT','ACTIVE','EXPIRED')),
     premium_amount NUMERIC(10,2),
-    max_payout NUMERIC(10,2),
     coverage_multiplier NUMERIC(4,2),
     activated_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW()

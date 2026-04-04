@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -18,6 +19,7 @@ import {
   ShieldAlert,
   Timer,
   CheckCircle2,
+  Zap,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { SharedHeader } from "../components/SharedHeader";
@@ -39,18 +41,18 @@ const SIDE_TRANSLATE = 8;
 
 type PolicyTier = "BASIC" | "STANDARD" | "PREMIUM";
 
-const PLANS = [
+const FALLBACK_PLANS: any[] = [
   {
     id: "BASIC",
     title: "Basic",
-    subtitle: "1.5x Multiplier",
+    subtitle: "20% of loss covered",
     price: "30",
     icon: Shield,
   },
   {
     id: "STANDARD",
     title: "Standard",
-    subtitle: "2.5x Multiplier",
+    subtitle: "40% of loss covered",
     price: "50",
     icon: ShieldCheck,
     recommended: true,
@@ -58,28 +60,56 @@ const PLANS = [
   {
     id: "PREMIUM",
     title: "Premium",
-    subtitle: "4.0x Multiplier",
+    subtitle: "60% of loss covered",
     price: "80",
     icon: ShieldAlert,
   },
 ];
 
 export default function PolicyScreen() {
+  const { quotes, fetchQuote, isLoading, activatePolicy, activePolicy } = usePolicyStore();
   const [selectedTier, setSelectedTier] = useState<PolicyTier>("STANDARD");
   const [activating, setActivating] = useState(false);
-  const initialIndex = PLANS.findIndex((plan) => plan.id === "STANDARD");
-  const scrollX = useSharedValue(initialIndex * SNAP_INTERVAL);
+  
+  useEffect(() => {
+    fetchQuote();
+  }, []);
+
+  const getDynamicPlans = () => {
+    if (!quotes || quotes.length === 0) return FALLBACK_PLANS;
+    return quotes.map((q) => {
+      const isStandard = q.tier === "STANDARD";
+      const isBasic = q.tier === "BASIC";
+      const coveragePercent = isBasic ? "20%" : isStandard ? "40%" : "60%";
+      return {
+        id: q.tier,
+        title: q.tier.charAt(0) + q.tier.slice(1).toLowerCase(),
+        subtitle: `${coveragePercent} of loss covered`,
+        price: q.premium_amount.toString(),
+        icon: isBasic ? Shield : isStandard ? ShieldCheck : ShieldAlert,
+        recommended: isStandard,
+        additional_price: q.additional_price,
+        base_price: q.base_price,
+        reason: q.reason,
+        policyId: q.policyId,
+      };
+    });
+  };
+
+  const currentPlans = getDynamicPlans();
+  const initialIndex = currentPlans.findIndex((plan) => plan.id === "STANDARD");
+  const validIndex = initialIndex === -1 ? 1 : initialIndex;
+  const scrollX = useSharedValue(validIndex * SNAP_INTERVAL);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    // Initial sync to ensure Standard is centered
     setTimeout(() => {
       flatListRef.current?.scrollToOffset({
-        offset: initialIndex * SNAP_INTERVAL,
+        offset: validIndex * SNAP_INTERVAL,
         animated: false,
       });
     }, 100);
-  }, [initialIndex]);
+  }, [validIndex]);
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -89,8 +119,8 @@ export default function PolicyScreen() {
 
   const handleMomentumScrollEnd = (event: any) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / SNAP_INTERVAL);
-    if (index >= 0 && index < PLANS.length) {
-      const tier = PLANS[index].id as PolicyTier;
+    if (index >= 0 && index < currentPlans.length) {
+      const tier = currentPlans[index].id as PolicyTier;
       if (tier !== selectedTier) {
         setSelectedTier(tier);
         Haptics.selectionAsync();
@@ -98,22 +128,25 @@ export default function PolicyScreen() {
     }
   };
 
-  const handleActivate = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setActivating(true);
-    try {
-      // Use a draft policy ID from quota or generate one
-      const draftId = `pol-draft-${selectedTier.toLowerCase()}-${Date.now()}`;
-      const success = await usePolicyStore.getState().activatePolicy(draftId);
-      if (success) {
-        Alert.alert("Success", `${selectedTier} Plan Activated!`);
-      } else {
-        Alert.alert("Error", "Activation failed");
-      }
-    } catch (e) {
-      Alert.alert("Error", "Activation failed");
-    }
-    setActivating(false);
+  const navigation = useNavigation<any>();
+
+  const handleActivate = () => {
+    const matchedPlan = currentPlans.find((p) => p.id === selectedTier);
+    if (!matchedPlan) return;
+    
+    const draftId = (matchedPlan as any)?.policyId || `pol-draft-${selectedTier.toLowerCase()}-${Date.now()}`;
+    const totalAmount = matchedPlan.price;
+    const basePrice = (matchedPlan as any)?.base_price || totalAmount;
+    const additionalPrice = (matchedPlan as any)?.additional_price || 0;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('BankSelection', {
+      policyId: draftId,
+      tierName: selectedTier,
+      totalAmount,
+      basePrice,
+      additionalPrice,
+    });
   };
 
   return (
@@ -132,85 +165,154 @@ export default function PolicyScreen() {
           </Text>
         </View>
 
-        <View style={styles.carouselSection}>
-          <Text style={styles.sectionHeader}>SELECT YOUR PLAN</Text>
-
-          <View style={styles.carouselWrapper}>
-            <Animated.FlatList
-              ref={flatListRef}
-              data={PLANS}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.carouselContainer}
-              snapToInterval={SNAP_INTERVAL}
-              snapToAlignment="center"
-              decelerationRate="fast"
-              bounces={false}
-              disableIntervalMomentum={true}
-              onScroll={onScroll}
-              onMomentumScrollEnd={handleMomentumScrollEnd}
-              scrollEventThrottle={16}
-              getItemLayout={(_, index) => ({
-                length: SNAP_INTERVAL,
-                offset: SNAP_INTERVAL * index,
-                index,
-              })}
-              renderItem={({ item, index }) => (
-                <TierCarouselCard
-                  item={item}
-                  index={index}
-                  scrollX={scrollX}
-                  selected={selectedTier === item.id}
-                />
-              )}
-            />
+        {activePolicy ? (
+          <View style={styles.activeCard}>
+            <View style={styles.activeHeaderRow}>
+               <ShieldCheck size={s(28)} color={theme.colors.success} />
+               <Text style={styles.activeTitle}>Active Protection</Text>
+            </View>
+            <View style={styles.activeDetailRow}>
+               <Text style={styles.activeDetailLabel}>Premium paid:</Text>
+               <Text style={styles.activeDetailValue}>₹{activePolicy.premiumAmount}/wk</Text>
+            </View>
+            <View style={styles.activeDetailRow}>
+               <Text style={styles.activeDetailLabel}>Coverage Limit:</Text>
+               <Text style={styles.activeDetailValue}>{Math.round(activePolicy.coverageMultiplier * 100)}% of loss</Text>
+            </View>
+            <View style={styles.activeDetailRow}>
+               <Text style={styles.activeDetailLabel}>Status:</Text>
+               <Text style={[styles.activeDetailValue, {color: theme.colors.success}]}>Protected</Text>
+            </View>
           </View>
-        </View>
-
-        <View style={styles.bentoRow}>
-          <HapticAction style={styles.bentoBox}>
-            <View
-              style={[
-                styles.bentoIcon,
-                { backgroundColor: theme.colors.background },
-              ]}
-            >
-              <Shield size={s(18)} color={theme.colors.onSurface} />
+        ) : (
+          <>
+            <View style={styles.carouselSection}>
+              <Text style={styles.sectionHeader}>SELECT YOUR PLAN</Text>
+              
+              {isLoading && currentPlans === FALLBACK_PLANS ? (
+                  <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: vs(40) }} />
+              ) : (
+                  <View style={styles.carouselWrapper}>
+                    <Animated.FlatList
+                      ref={flatListRef}
+                      data={currentPlans}
+                      keyExtractor={(item) => item.id}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.carouselContainer}
+                      snapToInterval={SNAP_INTERVAL}
+                      snapToAlignment="center"
+                      decelerationRate="fast"
+                      bounces={false}
+                      disableIntervalMomentum={true}
+                      onScroll={onScroll}
+                      onMomentumScrollEnd={handleMomentumScrollEnd}
+                      scrollEventThrottle={16}
+                      getItemLayout={(_, index) => ({
+                        length: SNAP_INTERVAL,
+                        offset: SNAP_INTERVAL * index,
+                        index,
+                      })}
+                      renderItem={({ item, index }) => (
+                        <TierCarouselCard
+                          item={item}
+                          index={index}
+                          scrollX={scrollX}
+                          selected={selectedTier === item.id}
+                        />
+                      )}
+                    />
+                  </View>
+              )}
             </View>
-            <Text style={styles.bentoLabel}>Max Benefit</Text>
-            <Text style={styles.bentoValue}>₹15,000</Text>
-          </HapticAction>
-          <HapticAction style={styles.bentoBox}>
-            <View
-              style={[
-                styles.bentoIcon,
-                { backgroundColor: theme.colors.background },
-              ]}
-            >
-              <Timer size={s(18)} color={theme.colors.onSurface} />
-            </View>
-            <Text style={styles.bentoLabel}>Wait Period</Text>
-            <Text style={styles.bentoValue}>24 Hours</Text>
-          </HapticAction>
-        </View>
 
-        <View style={styles.actionSection}>
-          <HapticAction
-            style={styles.primaryButton}
-            onPress={handleActivate}
-            disabled={activating}
-            hapticStyle={Haptics.ImpactFeedbackStyle.Medium}
-          >
-            {activating ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                Confirm {selectedTier}
-              </Text>
-            )}
-          </HapticAction>
-        </View>
+            {/* Unified ML Reason Box */}
+            {(() => {
+              const selectedPlan = currentPlans.find((p: any) => p.id === selectedTier);
+              if (selectedPlan && selectedPlan.additional_price && Number(selectedPlan.additional_price) > 0) {
+                return (
+                  <View style={styles.unifiedAdditionalBox}>
+                     <View style={styles.aiReasonBox}>
+                        <Zap size={20} color="#F59E0B" />
+                        <View style={styles.aiReasonTextContainer}>
+                           <Text style={styles.aiAdditionalAmountText}>
+                              +₹{selectedPlan.additional_price} Disruption Fee applied this week
+                           </Text>
+                            <Text style={styles.aiReasonText}>{selectedPlan.reason}</Text>
+                        </View>
+                     </View>
+                  </View>
+                );
+              }
+              return null;
+            })()}
+
+            <View style={styles.bentoRow}>
+              <HapticAction style={styles.bentoBox}>
+                <View
+                  style={[
+                    styles.bentoIcon,
+                    { backgroundColor: theme.colors.background },
+                  ]}
+                >
+                  <Shield size={s(18)} color={theme.colors.onSurface} />
+                </View>
+                <Text style={styles.bentoLabel}>Auto Claims</Text>
+                <Text style={styles.bentoValue}>Enabled</Text>
+              </HapticAction>
+              <HapticAction style={styles.bentoBox}>
+                <View
+                  style={[
+                    styles.bentoIcon,
+                    { backgroundColor: theme.colors.background },
+                  ]}
+                >
+                  <Timer size={s(18)} color={theme.colors.onSurface} />
+                </View>
+                <Text style={styles.bentoLabel}>Wait Period</Text>
+                <Text style={styles.bentoValue}>24 Hours</Text>
+              </HapticAction>
+            </View>
+
+            {/* Total Amount Summary */}
+            {(() => {
+              const selectedPlan = currentPlans.find((p: any) => p.id === selectedTier);
+              if (selectedPlan) {
+                return (
+                  <View style={styles.totalSummaryBox}>
+                    <View style={styles.totalSummaryRow}>
+                      <Text style={styles.totalSummaryLabel}>Total Weekly Premium</Text>
+                      <Text style={styles.totalSummaryAmount}>₹{selectedPlan.price}/wk</Text>
+                    </View>
+                    {(selectedPlan as any)?.base_price && (
+                       <Text style={styles.totalSummaryBreakdown}>
+                          Base: ₹{(selectedPlan as any).base_price} + Disruption: ₹{(selectedPlan as any).additional_price || 0}
+                       </Text>
+                    )}
+                  </View>
+                );
+              }
+              return null;
+            })()}
+
+            <View style={styles.actionSection}>
+              <HapticAction
+                style={styles.primaryButton}
+                onPress={handleActivate}
+                disabled={activating}
+                hapticStyle={Haptics.ImpactFeedbackStyle.Medium}
+              >
+                {activating ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    Proceed to Pay • {selectedTier}
+                  </Text>
+                )}
+              </HapticAction>
+            </View>
+          </>
+        )}
 
         <View style={{ height: vs(120) }} />
       </ScrollView>
@@ -240,7 +342,6 @@ const TierCarouselCard = ({ item, index, scrollX, selected }: any) => {
       Extrapolate.CLAMP,
     );
 
-    // A small offset adds depth while keeping the motion subtle and natural.
     const translateX = interpolate(
       scrollX.value,
       inputRange,
@@ -449,6 +550,11 @@ const styles = StyleSheet.create({
     fontSize: ms(12),
     color: theme.colors.onSurfaceVariant,
   },
+  aiReasonBox: { flexDirection: 'row', backgroundColor: '#FFFBEB', padding: s(12), borderRadius: s(8), alignItems: 'center', gap: s(12) },
+  unifiedAdditionalBox: { paddingHorizontal: s(24), marginBottom: vs(24) },
+  aiReasonTextContainer: { flex: 1, gap: vs(2) },
+  aiAdditionalAmountText: { fontFamily: 'Inter_700Bold', fontSize: ms(13), color: '#B45309' },
+  aiReasonText: { fontFamily: 'Inter_500Medium', fontSize: ms(12), color: '#92400E' },
   featuresList: {
     gap: vs(8),
     borderTopWidth: 1,
@@ -514,4 +620,15 @@ const styles = StyleSheet.create({
     fontSize: ms(16),
     color: "#FFFFFF",
   },
+  activeCard: { backgroundColor: theme.colors.surface, marginHorizontal: s(24), padding: s(24), borderRadius: s(24), borderWidth: 2, borderColor: theme.colors.success + '40' },
+  activeHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: vs(24), gap: s(12) },
+  activeTitle: { fontFamily: 'Manrope_800ExtraBold', fontSize: ms(22), color: theme.colors.success },
+  activeDetailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: vs(12) },
+  activeDetailLabel: { fontFamily: 'Inter_500Medium', fontSize: ms(15), color: theme.colors.onSurfaceVariant },
+  activeDetailValue: { fontFamily: 'Manrope_700Bold', fontSize: ms(16), color: theme.colors.onSurface },
+  totalSummaryBox: { marginHorizontal: s(24), marginBottom: vs(16), backgroundColor: theme.colors.surface, borderRadius: s(16), padding: s(16), borderWidth: 1, borderColor: theme.colors.primary + '30' },
+  totalSummaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalSummaryLabel: { fontFamily: 'Inter_600SemiBold', fontSize: ms(14), color: theme.colors.onSurfaceVariant },
+  totalSummaryAmount: { fontFamily: 'Manrope_800ExtraBold', fontSize: ms(20), color: theme.colors.primary },
+  totalSummaryBreakdown: { fontFamily: 'Inter_500Medium', fontSize: ms(12), color: theme.colors.outline, marginTop: vs(4) },
 });

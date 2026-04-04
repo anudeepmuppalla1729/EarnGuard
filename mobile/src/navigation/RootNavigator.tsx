@@ -27,6 +27,7 @@ import IdentityVerificationScreen from "../screens/auth/IdentityVerificationScre
 import SelfieVerificationScreen from "../screens/auth/SelfieVerificationScreen";
 import AllSetScreen from "../screens/auth/AllSetScreen";
 import PolicySelectionScreen from "../screens/auth/PolicySelectionScreen";
+import BankSelectionScreen from "../screens/BankSelectionScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -107,6 +108,7 @@ export default function RootNavigator() {
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="BankSelection" component={BankSelectionScreen} />
             <Stack.Screen
               name="NotificationSettings"
               component={NotificationSettingsScreen}

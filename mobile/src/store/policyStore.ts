@@ -71,18 +71,35 @@ export const usePolicyStore = create<PolicyState>((set, get) => ({
       const idempotencyKey = `activate-${policyId}-${Date.now()}`;
       const res = await apiClient.policies.activate(policyId, idempotencyKey);
       if (res.success) {
-        // Update policy in local state
-        set(state => ({
+        // Try to find from policies list first, then fallback to quotes
+        const state = get();
+        const existingPolicy = state.policies.find(p => p.id === policyId);
+        const matchingQuote = state.quotes.find(q => q.policyId === policyId);
+
+        // Build the coverage multiplier from the quote tier
+        const tierMultiplier = matchingQuote
+          ? (matchingQuote.tier === 'BASIC' ? 0.2 : matchingQuote.tier === 'STANDARD' ? 0.4 : 0.6)
+          : 0;
+
+        const activatedPolicy: Policy = existingPolicy
+          ? { ...existingPolicy, status: 'ACTIVE' as const, activatedAt: res.data.activatedAt }
+          : {
+              id: policyId,
+              workerId: '',
+              status: 'ACTIVE' as const,
+              premiumAmount: matchingQuote?.premium_amount || 0,
+              coverageMultiplier: tierMultiplier,
+              activatedAt: res.data.activatedAt,
+              createdAt: new Date().toISOString(),
+            };
+
+        set({
           policies: state.policies.map(p =>
             p.id === policyId ? { ...p, status: 'ACTIVE' as const, activatedAt: res.data.activatedAt } : p
           ),
-          activePolicy: {
-            ...state.policies.find(p => p.id === policyId)!,
-            status: 'ACTIVE' as const,
-            activatedAt: res.data.activatedAt,
-          },
+          activePolicy: activatedPolicy,
           isActivating: false,
-        }));
+        });
         return true;
       }
       set({ isActivating: false });

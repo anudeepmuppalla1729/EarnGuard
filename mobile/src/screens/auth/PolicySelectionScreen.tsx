@@ -41,7 +41,15 @@ export default function PolicySelectionScreen() {
     try {
       await apiClient.policies.activate(selectedPolicyId, `init-${selectedPolicyId}`);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigation.navigate('TwoFactorAuth'); // Flow forwards
+      const tierName = quotes.find(q => q.policyId === selectedPolicyId)?.tier || 'Policy';
+      Alert.alert(
+        'Activated Successfully',
+        `${tierName} plan has been activated!`,
+        [
+          { text: 'Continue', onPress: () => navigation.navigate('TwoFactorAuth') }
+        ],
+        { cancelable: false }
+      );
     } catch (e: any) {
       Alert.alert('Activation Failed', e?.error?.message || 'Please try again.');
       setActivating(false);
@@ -84,21 +92,31 @@ export default function PolicySelectionScreen() {
                      </View>
 
                      <View style={styles.priceRow}>
-                        <Text style={styles.premiumAmount}>₹{quote.premium_amount}</Text>
+                        <Text style={styles.premiumAmount}>Total: ₹{quote.premium_amount}</Text>
                         <Text style={styles.premiumSub}>/week</Text>
                      </View>
+                     <Text style={{ fontFamily: 'Inter_500Medium', fontSize: ms(12), color: theme.colors.outline, marginTop: vs(-8), marginBottom: vs(12) }}>
+                        (Base: ₹{quote.base_price} + Disruption: ₹{quote.additional_price})
+                     </Text>
 
                      <View style={styles.divider} />
 
                      <View style={styles.benefitRow}>
                        <ShieldCheck size={16} color={theme.colors.primary} />
-                       <Text style={styles.benefitText}>Coverage upto ₹{quote.max_payout}</Text>
+                       <Text style={styles.benefitText}>
+                          {quote.tier === "BASIC" ? "20%" : quote.tier === "STANDARD" ? "40%" : "60%"} of loss covered
+                       </Text>
                      </View>
 
-                     {quote.tier === 'STANDARD' && quote.reason && (
+                     {quote.additional_price > 0 && quote.reason && (
                         <View style={styles.aiReasonBox}>
-                          <Zap size={14} color="#F59E0B" />
-                          <Text style={styles.aiReasonText}>{quote.reason}</Text>
+                          <Zap size={18} color="#F59E0B" />
+                          <View style={styles.aiReasonTextContainer}>
+                              <Text style={styles.aiAdditionalAmountText}>
+                                +₹{quote.additional_price} this week
+                              </Text>
+                              <Text style={styles.aiReasonText}>{quote.reason}</Text>
+                          </View>
                         </View>
                      )}
                    </TouchableOpacity>
@@ -155,8 +173,10 @@ const styles = StyleSheet.create({
   benefitRow: { flexDirection: 'row', alignItems: 'center', marginBottom: vs(8), gap: s(8) },
   benefitText: { fontFamily: 'Inter_500Medium', fontSize: ms(14), color: theme.colors.onSurface },
   
-  aiReasonBox: { flexDirection: 'row', backgroundColor: '#FFFBEB', padding: s(12), borderRadius: s(8), marginTop: vs(8), alignItems: 'center', gap: s(8) },
-  aiReasonText: { fontFamily: 'Inter_500Medium', fontSize: ms(12), color: '#92400E', flex: 1 },
+  aiReasonBox: { flexDirection: 'row', backgroundColor: '#FFFBEB', padding: s(12), borderRadius: s(8), marginTop: vs(8), alignItems: 'center', gap: s(12) },
+  aiReasonTextContainer: { flex: 1, gap: vs(2) },
+  aiAdditionalAmountText: { fontFamily: 'Inter_700Bold', fontSize: ms(13), color: '#B45309' },
+  aiReasonText: { fontFamily: 'Inter_500Medium', fontSize: ms(12), color: '#92400E' },
 
   footer: { paddingBottom: vs(40), paddingTop: vs(16) },
   primaryButton: { backgroundColor: theme.colors.primary, height: vs(60), borderRadius: s(16), justifyContent: 'center', alignItems: 'center' },

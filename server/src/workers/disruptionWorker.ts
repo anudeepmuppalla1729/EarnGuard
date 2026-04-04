@@ -53,7 +53,7 @@ export const disruptionWorker = new Worker(DISRUPTION_QUEUE_NAME, async (job: Jo
         // Step 1: Zone Mapping (Fetch unique zone_id mapped with active target cities)
         // Group workers by zone. 
         const workersRes = await client.query(`
-            SELECT w.id as worker_id, w.city_id, w.zone_id, p.id as policy_id, p.premium_amount, p.max_payout, p.coverage_multiplier
+            SELECT w.id as worker_id, w.city_id, w.zone_id, p.id as policy_id, p.premium_amount, p.coverage_multiplier
             FROM workers w
             JOIN policies p ON w.id = p.worker_id
             WHERE p.status = 'ACTIVE'
@@ -163,9 +163,7 @@ export const disruptionWorker = new Worker(DISRUPTION_QUEUE_NAME, async (job: Jo
                 const remainingLoss = Math.max(0, intervalLoss - baseCoverage);
                 const riskAdjusted = remainingLoss * riskScore;
                 
-                const rawPayout = baseCoverage + riskAdjusted;
-                const maxPayout = parseFloat(worker.max_payout);
-                const payout = Math.min(rawPayout, maxPayout);
+                const payout = baseCoverage + riskAdjusted;
                 
                 if (payout > 0) {
                     const claimId = uuidv4();

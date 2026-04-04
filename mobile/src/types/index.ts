@@ -44,7 +44,6 @@ export interface Policy {
   cityId?: string;
   status: PolicyStatus;
   premiumAmount: number;
-  maxPayout: number;
   coverageMultiplier: number;
   activatedAt?: string;
   createdAt: string;
@@ -57,7 +56,6 @@ export interface PolicyQuote {
   additional_price: number;
   premium_amount: number;
   reason: string;
-  max_payout: number;
 }
 
 // ── Claim ───────────────────────────────────────────────────────

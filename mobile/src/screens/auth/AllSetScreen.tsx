@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -15,6 +15,7 @@ export default function AllSetScreen() {
   const signup = useAuthStore(s => s.signup);
   const completeAuth = useAuthStore(s => s.completeAuth);
   const isLoading = useAuthStore(s => s.isLoading);
+  const [isSuccess, setIsSuccess] = useState(false);
   const prevData = route.params || {};
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function AllSetScreen() {
         // platform_worker_id is auto-assigned by the platform API using email + mobile
         await signup(prevData.email, prevData.password, prevData.fullName, prevData.phone, prevData.platform);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setIsSuccess(true);
       } catch (e: any) {
         Alert.alert('Sign Up Failed', e?.error?.message || 'Please try again.', [
           { text: 'Go Back', onPress: () => navigation.navigate('SignUp') }
@@ -69,15 +71,17 @@ export default function AllSetScreen() {
               </Text>
             </View>
 
-            <View style={styles.footer}>
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={handleFinish}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.primaryButtonText}>Go to Dashboard →</Text>
-              </TouchableOpacity>
-            </View>
+            {isSuccess && (
+              <View style={styles.footer}>
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={handleFinish}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.primaryButtonText}>Go to Dashboard →</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
       </View>

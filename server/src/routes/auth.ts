@@ -98,20 +98,19 @@ router.post('/login', validate(LoginSchema), async (req: Request, res: Response)
   }
 });
 
-// ─── Curated driver pool (mirrors mock_servers/app.ts — used as fallback) ────
-const CURATED_DRIVERS = [
-  { platformWorkerId: 'WORKER-001', name: 'Rahul Verma',   platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z1' },
-  { platformWorkerId: 'WORKER-002', name: 'Priya Singh',   platform: 'BLINKIT', cityId: 'C1', zoneId: 'Z2' },
-  { platformWorkerId: 'WORKER-003', name: 'Anil Kumar',    platform: 'BLINKIT', cityId: 'C1', zoneId: 'Z1' },
-  { platformWorkerId: 'WORKER-004', name: 'Suresh Babu',   platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z2' },
-  { platformWorkerId: 'WORKER-005', name: 'Deepa Nair',    platform: 'SWIGGY',  cityId: 'C1', zoneId: 'Z1' },
-  { platformWorkerId: 'WORKER-006', name: 'Karthik Rajan', platform: 'ZEPTO',   cityId: 'C1', zoneId: 'Z2' },
-];
-
-/** Deterministically pick a curated driver from mobile number — same logic as mock server */
-function resolveGigWorker(mobile: string) {
-  const lastDigit = parseInt(mobile.slice(-1), 10) || 0;
-  return CURATED_DRIVERS[lastDigit % CURATED_DRIVERS.length];
+/** Generate a unique fallback gig worker profile when mock server is unavailable */
+function resolveGigWorker(mobile: string, email: string) {
+  const uniqueId = 'WRK-FB-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
+  const name = email.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'New Worker';
+  const platforms = ['ZEPTO', 'BLINKIT', 'SWIGGY'] as const;
+  const zones = ['Z1', 'Z2'];
+  return {
+    platformWorkerId: uniqueId,
+    name,
+    platform: platforms[Math.floor(Math.random() * platforms.length)],
+    cityId: 'C1',
+    zoneId: zones[Math.floor(Math.random() * zones.length)],
+  };
 }
 
 // ─── POST /register ─────────────────────────────────────────────────────────────────────
@@ -135,11 +134,11 @@ router.post('/register', validate(RegisterSchema), async (req: Request, res: Res
       if (lookupRes.ok) {
         gigWorker = await lookupRes.json();
       } else {
-        gigWorker = resolveGigWorker(mobile);
+        gigWorker = resolveGigWorker(mobile, email);
         console.warn('[Register] Mock server lookup failed, using inline fallback');
       }
     } catch {
-      gigWorker = resolveGigWorker(mobile);
+      gigWorker = resolveGigWorker(mobile, email);
       console.warn('[Register] Mock server unreachable, using inline fallback');
     }
 
