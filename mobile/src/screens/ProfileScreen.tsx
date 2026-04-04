@@ -1,22 +1,49 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Switch, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, Switch, Platform, Alert } from 'react-native';
 import { theme } from '../theme/theme';
 import { s, vs, ms } from '../theme/responsive';
-import { useStore } from '../store';
+import { useAuthStore } from '../store/authStore';
 import { Shield, Star, Lock, Fingerprint, Bell, CreditCard, Languages, HelpCircle, LogOut, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { SharedHeader } from '../components/SharedHeader';
 import { HapticAction } from '../components/HapticAction';
+import { BiometricService } from '../services/biometric';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
-  const { user, logout } = useStore();
-  const [isBiometricEnabled, setIsBiometricEnabled] = React.useState(true);
+  const user = useAuthStore(s => s.user);
+  const logout = useAuthStore(s => s.logout);
+  const biometricEnabled = useAuthStore(s => s.biometricEnabled);
+  const setBiometricEnabled = useAuthStore(s => s.setBiometricEnabled);
+  const [isBiometricEnabled, setIsBiometricEnabled] = useState(biometricEnabled);
+
+  useEffect(() => {
+    setIsBiometricEnabled(biometricEnabled);
+  }, [biometricEnabled]);
 
   const handlePress = (screen?: string) => {
     if (screen) {
       navigation.navigate(screen);
+    }
+  };
+
+  const handleBiometricToggle = async (value: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (value) {
+      const available = await BiometricService.isAvailable();
+      if (!available) {
+        Alert.alert('Unavailable', 'Your device does not support biometric authentication.');
+        return;
+      }
+      const success = await BiometricService.authenticate('Verify to enable biometric login');
+      if (success) {
+        setIsBiometricEnabled(true);
+        setBiometricEnabled(true);
+      }
+    } else {
+      setIsBiometricEnabled(false);
+      setBiometricEnabled(false);
     }
   };
 
@@ -93,8 +120,7 @@ export default function ProfileScreen() {
                 value={isBiometricEnabled} 
                 onValueChange={(v) => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setIsBiometricEnabled(v);
-                  if (v) navigation.navigate('BiometricSetup');
+                  handleBiometricToggle(v);
                 }} 
                 trackColor={{ false: theme.colors.divider, true: theme.colors.primary }}
                 thumbColor={Platform.OS === 'ios' ? undefined : '#FFFFFF'}

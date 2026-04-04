@@ -7,6 +7,7 @@ import { theme } from '../theme/theme';
 import { s, vs, ms } from '../theme/responsive';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { useNotificationStore } from '../store/notificationStore';
 
 interface SharedHeaderProps {
   showNotifications?: boolean;
@@ -15,6 +16,7 @@ interface SharedHeaderProps {
 
 export const SharedHeader = ({ showNotifications = true, showProfile = true }: SharedHeaderProps) => {
   const navigation = useNavigation<any>();
+  const unreadCount = useNotificationStore(s => s.unreadCount);
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -39,7 +41,12 @@ export const SharedHeader = ({ showNotifications = true, showProfile = true }: S
                 }} 
                 style={styles.notificationBtn}
               >
-                <Bell size={s(20)} color={theme.colors.onSurfaceVariant} />
+              <Bell size={s(20)} color={theme.colors.onSurfaceVariant} />
+                {unreadCount > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
             {showProfile && (
@@ -117,5 +124,24 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: s(2),
+    right: s(2),
+    backgroundColor: '#EF4444',
+    borderRadius: 99,
+    minWidth: s(16),
+    height: s(16),
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  badgeText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: ms(9),
+    color: '#FFFFFF',
+    textAlign: 'center' as const,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/theme';
@@ -7,19 +7,41 @@ import { ChevronLeft, Info } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { HapticAction } from '../components/HapticAction';
+import { CacheStorage, STORAGE_KEYS } from '../services/storage';
+
+interface NotifPrefs {
+  policyUpdates: boolean;
+  securityNotices: boolean;
+  claimAlerts: boolean;
+  marketing: boolean;
+}
+
+const DEFAULT_PREFS: NotifPrefs = {
+  policyUpdates: true,
+  securityNotices: true,
+  claimAlerts: true,
+  marketing: false,
+};
 
 export default function NotificationSettingsScreen() {
   const navigation = useNavigation();
-  const [settings, setSettings] = useState({
-    policyUpdates: true,
-    securityNotices: true,
-    claimAlerts: true,
-    marketing: false,
-  });
+  const [settings, setSettings] = useState<NotifPrefs>(DEFAULT_PREFS);
 
-  const toggleSwitch = (key: keyof typeof settings) => {
+  // Load saved preferences on mount
+  useEffect(() => {
+    (async () => {
+      const saved = await CacheStorage.get<NotifPrefs>(STORAGE_KEYS.NOTIFICATION_PREFS);
+      if (saved) setSettings(saved);
+    })();
+  }, []);
+
+  const toggleSwitch = (key: keyof NotifPrefs) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+    setSettings(prev => {
+      const updated = { ...prev, [key]: !prev[key] };
+      CacheStorage.set(STORAGE_KEYS.NOTIFICATION_PREFS, updated);
+      return updated;
+    });
   };
 
   return (
