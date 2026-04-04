@@ -47,12 +47,14 @@ CREATE TABLE IF NOT EXISTS ml_weekly_context (
 -- 2.3 Users / Workers
 CREATE TABLE IF NOT EXISTS workers (
     id UUID PRIMARY KEY,
+    platform_worker_id TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
+    mobile TEXT UNIQUE,
     password_hash TEXT NOT NULL,
     name TEXT,
     city_id TEXT REFERENCES cities(id),
     zone_id TEXT REFERENCES zones(id),
-    platform TEXT CHECK (platform IN ('ZEPTO','BLINKIT')),
+    platform TEXT CHECK (platform IN ('ZEPTO','BLINKIT','SWIGGY')),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -117,13 +119,27 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- 2.9 Devices
 CREATE TABLE IF NOT EXISTS devices (
-    id UUID PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
     fcm_token TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- 2.10 Outbox Pattern
+-- 2.10 Refresh Tokens (proper token rotation)
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+    token_hash TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Index for fast lookup on token_hash
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_worker ON refresh_tokens(worker_id);
+
+-- 2.11 Outbox Pattern
 CREATE TABLE IF NOT EXISTS outbox_events (
     id UUID PRIMARY KEY,
     event_type TEXT,
