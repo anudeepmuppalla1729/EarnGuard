@@ -52,6 +52,7 @@ export interface Policy {
 
 export interface PolicyQuote {
   policyId: string;
+  tier: 'BASIC' | 'STANDARD' | 'PREMIUM';
   base_price: number;
   additional_price: number;
   premium_amount: number;
@@ -121,7 +122,7 @@ export interface ApiResponse<T> {
 
 export interface ApiQuoteResponse {
   success: boolean;
-  quote: PolicyQuote;
+  quotes: PolicyQuote[];
 }
 
 export interface ApiError {

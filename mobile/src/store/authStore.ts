@@ -21,7 +21,7 @@ interface AuthState {
 
   // Actions
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, mobile: string, platform?: 'ZEPTO' | 'BLINKIT' | 'SWIGGY', city_id?: string, zone_id?: string) => Promise<void>;
   verifyOtp: (code: string) => Promise<boolean>;
   completeAuth: (enableBiometric: boolean) => Promise<void>;
   logout: () => Promise<void>;
@@ -67,10 +67,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signup: async (email, password, name) => {
+  signup: async (email, password, name, mobile, platform: 'ZEPTO' | 'BLINKIT' | 'SWIGGY' = 'ZEPTO', city_id = 'C1', zone_id = 'Z1') => {
     set({ isLoading: true });
     try {
-      await apiClient.auth.register(email, password, name);
+      await apiClient.auth.register(email, password, mobile);
       // After sign up, perform login
       await get().login(email, password);
     } catch (e) {

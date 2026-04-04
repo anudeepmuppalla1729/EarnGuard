@@ -161,14 +161,35 @@ export const mockNotifications: AppNotification[] = [
   },
 ];
 
-export const mockQuote: PolicyQuote = {
-  policyId: 'pol-new-draft',
-  base_price: 150.00,
-  additional_price: 145.00,
-  premium_amount: 295.00,
-  reason: 'Heavy rain, extreme alert, and flood warnings combine with existing outages for high overall risk.',
-  max_payout: 2950.00,
-};
+export const mockQuotes: PolicyQuote[] = [
+  {
+    policyId: 'pol-new-draft-basic',
+    tier: 'BASIC',
+    base_price: 150.00,
+    additional_price: 145.00,
+    premium_amount: 206.50,
+    reason: '',
+    max_payout: 1770.00,
+  },
+  {
+    policyId: 'pol-new-draft-standard',
+    tier: 'STANDARD',
+    base_price: 150.00,
+    additional_price: 145.00,
+    premium_amount: 295.00,
+    reason: 'Heavy rain, extreme alert, and flood warnings combine with existing outages for high overall risk.',
+    max_payout: 2950.00,
+  },
+  {
+    policyId: 'pol-new-draft-premium',
+    tier: 'PREMIUM',
+    base_price: 150.00,
+    additional_price: 145.00,
+    premium_amount: 413.00,
+    reason: '',
+    max_payout: 5900.00,
+  }
+];
 
 // ── Helpers ─────────────────────────────────────────────────────
 

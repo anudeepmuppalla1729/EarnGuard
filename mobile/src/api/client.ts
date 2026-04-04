@@ -1,22 +1,121 @@
 // =============================================================
-// API Client — Mock responses shaped exactly like real backend
-// When backend is ready: swap delay() → axios calls, zero changes elsewhere
+// API Client — Real HTTP calls to the EarnGuard backend
+// Base URL: EXPO_PUBLIC_API_URL (set in .env)
+// Auth: Bearer <accessToken> stored in SecureStorage
+// Token refresh: automatic on 401 using stored refreshToken
 // =============================================================
-import {
-  mockUser, mockPolicies, mockClaims, mockTransactions,
-  mockNotifications, mockQuote,
-} from './mockData';
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { SecureStorage, STORAGE_KEYS } from '../services/storage';
 import type {
   Worker, Policy, Claim, WalletTransaction, WalletBalance,
   AppNotification, PolicyQuote, AuthTokens, ApiResponse, ApiQuoteResponse,
 } from '../types';
 
-// Simulated delay helper
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+// ─── Base URL ─────────────────────────────────────────────────────────────────
+const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.36:3000') + '/api/v1';
 
-// Simulated token generation
-const generateToken = () => `eyJhbGciOiJIUzI1NiJ9.${Date.now()}.mock_${Math.random().toString(36).slice(2)}`;
+// ─── Axios Instance ───────────────────────────────────────────────────────────
+const http: AxiosInstance = axios.create({
+  baseURL: BASE_URL,
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+});
 
+// ─── Request Interceptor — Attach Access Token ────────────────────────────────
+http.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  const token = await SecureStorage.get(STORAGE_KEYS.ACCESS_TOKEN);
+  if (token && config.headers) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ─── Response Interceptor — Auto-Refresh on 401 ───────────────────────────────
+let isRefreshing = false;
+let refreshQueue: Array<(token: string) => void> = [];
+
+const processQueue = (token: string) => {
+  refreshQueue.forEach(cb => cb(token));
+  refreshQueue = [];
+};
+
+http.interceptors.response.use(
+  response => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // Queue subsequent requests until refresh completes
+        return new Promise(resolve => {
+          refreshQueue.push((token: string) => {
+            originalRequest.headers['Authorization'] = `Bearer ${token}`;
+            resolve(http(originalRequest));
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const storedRefresh = await SecureStorage.get(STORAGE_KEYS.REFRESH_TOKEN);
+        if (!storedRefresh) throw new Error('No refresh token');
+
+        const { data } = await axios.post<ApiResponse<AuthTokens>>(
+          `${BASE_URL}/auth/refresh`,
+          { refreshToken: storedRefresh }
+        );
+
+        const { accessToken, refreshToken, expiresIn } = data.data;
+        const expiry = Date.now() + expiresIn * 1000;
+
+        await SecureStorage.set(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+        await SecureStorage.set(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        await SecureStorage.set(STORAGE_KEYS.SESSION_EXPIRY, String(expiry));
+
+        processQueue(accessToken);
+        originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
+        return http(originalRequest);
+      } catch (refreshError) {
+        refreshQueue = [];
+        // Clear tokens so the app navigates to login
+        await SecureStorage.remove(STORAGE_KEYS.ACCESS_TOKEN);
+        await SecureStorage.remove(STORAGE_KEYS.REFRESH_TOKEN);
+        await SecureStorage.remove(STORAGE_KEYS.SESSION_EXPIRY);
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    // Normalize error shape so stores can catch cleanly
+    const apiError = {
+      success: false,
+      error: {
+        code:    (error.response?.data as any)?.error?.code ?? 'API_ERROR',
+        message: (error.response?.data as any)?.error?.message
+                   ?? (error.response?.data as any)?.error
+                   ?? error.message,
+      },
+    };
+    return Promise.reject(apiError);
+  }
+);
+
+// ─── Typed helper ─────────────────────────────────────────────────────────────
+const get  = <T>(url: string, params?: object) =>
+  http.get<T>(url, { params }).then(r => r.data);
+
+const post = <T>(url: string, body?: object) =>
+  http.post<T>(url, body).then(r => r.data);
+
+const put  = <T>(url: string, body?: object) =>
+  http.put<T>(url, body).then(r => r.data);
+
+// =============================================================
+// API Client
+// =============================================================
 export const apiClient = {
   // ── AUTH ─────────────────────────────────────────────────────
 
@@ -24,73 +123,37 @@ export const apiClient = {
     /**
      * POST /api/v1/auth/login
      */
-    login: async (email: string, password: string): Promise<ApiResponse<AuthTokens>> => {
-      await delay(800);
-      // Accept demo credentials or any valid-looking email
-      if (
-        (email === 'test@test.com' && password === 'password') ||
-        (email === 'avi@earnguard.com' && password === 'password') ||
-        (email.includes('@') && password.length >= 6)
-      ) {
-        return {
-          success: true,
-          data: {
-            accessToken: generateToken(),
-            refreshToken: generateToken(),
-            expiresIn: 900,
-          },
-        };
-      }
-      throw { success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } };
-    },
+    login: (email: string, password: string): Promise<ApiResponse<AuthTokens>> =>
+      post<ApiResponse<AuthTokens>>('/auth/login', { email, password }),
 
     /**
      * POST /api/v1/auth/register
+     * Worker ID is auto-assigned by the platform API using email + mobile.
      */
-    register: async (email: string, password: string, name: string): Promise<ApiResponse<{ id: string }>> => {
-      await delay(1000);
-      if (password.length < 6) {
-        throw { success: false, error: { code: 'VALIDATION_ERROR', message: 'Password must be at least 6 characters' } };
-      }
-      return {
-        success: true,
-        data: { id: `usr-${Date.now()}` },
-      };
-    },
+    register: (email: string, password: string, mobile: string): Promise<ApiResponse<{ id: string; platformWorkerId: string; name: string; platform: string }>> =>
+      post<ApiResponse<{ id: string; platformWorkerId: string; name: string; platform: string }>>('/auth/register', { email, password, mobile }),
 
     /**
-     * Simulated OTP verification (not in real API but needed for 2FA flow)
+     * Simulated OTP verification — no backend endpoint, accept any 6-digit code
+     * (kept as mock until 2FA is implemented)
      */
     verifyOtp: async (code: string): Promise<ApiResponse<{ verified: boolean }>> => {
-      await delay(600);
-      // Accept any 6-digit code
-      if (code.length === 6) {
-        return { success: true, data: { verified: true } };
-      }
+      if (code.length === 6) return { success: true, data: { verified: true } };
       throw { success: false, error: { code: 'INVALID_OTP', message: 'Invalid verification code' } };
     },
 
     /**
      * POST /api/v1/auth/refresh
      */
-    refresh: async (refreshToken: string): Promise<ApiResponse<AuthTokens>> => {
-      await delay(300);
-      return {
-        success: true,
-        data: {
-          accessToken: generateToken(),
-          refreshToken: generateToken(),
-          expiresIn: 900,
-        },
-      };
-    },
+    refresh: (refreshToken: string): Promise<ApiResponse<AuthTokens>> =>
+      post<ApiResponse<AuthTokens>>('/auth/refresh', { refreshToken }),
 
     /**
      * POST /api/v1/auth/logout
      */
     logout: async (): Promise<{ success: boolean }> => {
-      await delay(200);
-      return { success: true };
+      const refreshToken = await SecureStorage.get(STORAGE_KEYS.REFRESH_TOKEN);
+      return post<{ success: boolean }>('/auth/logout', { refreshToken });
     },
   },
 
@@ -100,10 +163,8 @@ export const apiClient = {
     /**
      * GET /api/v1/workers/me
      */
-    me: async (): Promise<ApiResponse<Worker>> => {
-      await delay(500);
-      return { success: true, data: { ...mockUser } };
-    },
+    me: (): Promise<ApiResponse<Worker>> =>
+      get<ApiResponse<Worker>>('/workers/me'),
   },
 
   // ── WALLET ──────────────────────────────────────────────────
@@ -112,36 +173,14 @@ export const apiClient = {
     /**
      * GET /api/v1/wallet
      */
-    getBalance: async (): Promise<ApiResponse<WalletBalance>> => {
-      await delay(300);
-      return {
-        success: true,
-        data: {
-          balance: mockUser.walletBalance,
-          currency: 'INR',
-          lastUpdatedAt: new Date().toISOString(),
-        },
-      };
-    },
+    getBalance: (): Promise<ApiResponse<WalletBalance>> =>
+      get<ApiResponse<WalletBalance>>('/wallet'),
 
     /**
      * GET /api/v1/wallet/transactions
      */
-    getTransactions: async (page = 1, limit = 10): Promise<ApiResponse<WalletTransaction[]>> => {
-      await delay(400);
-      const start = (page - 1) * limit;
-      const items = mockTransactions.slice(start, start + limit);
-      return {
-        success: true,
-        data: items,
-        meta: {
-          page,
-          limit,
-          total: mockTransactions.length,
-          totalPages: Math.ceil(mockTransactions.length / limit),
-        },
-      };
-    },
+    getTransactions: (page = 1, limit = 10): Promise<ApiResponse<WalletTransaction[]>> =>
+      get<ApiResponse<WalletTransaction[]>>('/wallet/transactions', { page, limit }),
   },
 
   // ── POLICIES ────────────────────────────────────────────────
@@ -150,51 +189,25 @@ export const apiClient = {
     /**
      * GET /api/v1/policies
      */
-    list: async (page = 1, limit = 10): Promise<ApiResponse<Policy[]>> => {
-      await delay(600);
-      return {
-        success: true,
-        data: [...mockPolicies],
-        meta: {
-          page,
-          limit,
-          total: mockPolicies.length,
-          totalPages: 1,
-        },
-      };
-    },
+    list: (page = 1, limit = 10): Promise<ApiResponse<Policy[]>> =>
+      get<ApiResponse<Policy[]>>('/policies', { page, limit }),
 
     /**
      * POST /api/v1/policies/quote
      */
-    quote: async (): Promise<ApiQuoteResponse> => {
-      await delay(1000);
-      return {
-        success: true,
-        quote: { ...mockQuote, policyId: `pol-draft-${Date.now()}` },
-      };
-    },
+    quote: (): Promise<ApiQuoteResponse> =>
+      post<ApiQuoteResponse>('/policies/quote'),
 
     /**
-     * POST /api/v1/policies/{id}/activate
+     * POST /api/v1/policies/activate
      */
-    activate: async (id: string, idempotencyKey: string): Promise<ApiResponse<{
+    activate: (policyId: string, idempotencyKey: string): Promise<ApiResponse<{
       policyId: string;
       status: string;
       activatedAt: string;
       bankTransactionId: string;
-    }>> => {
-      await delay(1200);
-      return {
-        success: true,
-        data: {
-          policyId: id,
-          status: 'ACTIVE',
-          activatedAt: new Date().toISOString(),
-          bankTransactionId: `mock-tx-${Date.now()}`,
-        },
-      };
-    },
+    }>> =>
+      post<ApiResponse<any>>('/policies/activate', { policyId, idempotencyKey }),
   },
 
   // ── CLAIMS ──────────────────────────────────────────────────
@@ -203,21 +216,8 @@ export const apiClient = {
     /**
      * GET /api/v1/claims
      */
-    list: async (page = 1, limit = 10): Promise<ApiResponse<Claim[]>> => {
-      await delay(600);
-      const start = (page - 1) * limit;
-      const items = mockClaims.slice(start, start + limit);
-      return {
-        success: true,
-        data: items,
-        meta: {
-          page,
-          limit,
-          total: mockClaims.length,
-          totalPages: Math.ceil(mockClaims.length / limit),
-        },
-      };
-    },
+    list: (page = 1, limit = 10): Promise<ApiResponse<Claim[]>> =>
+      get<ApiResponse<Claim[]>>('/claims', { page, limit }),
   },
 
   // ── NOTIFICATIONS ───────────────────────────────────────────
@@ -226,33 +226,19 @@ export const apiClient = {
     /**
      * POST /api/v1/notifications/devices
      */
-    registerDevice: async (deviceId: string, fcmToken: string): Promise<ApiResponse<{ deviceId: string; registered: boolean }>> => {
-      await delay(300);
-      return {
-        success: true,
-        data: { deviceId, registered: true },
-      };
-    },
+    registerDevice: (deviceId: string, fcmToken: string): Promise<ApiResponse<{ deviceId: string; registered: boolean }>> =>
+      post<ApiResponse<{ deviceId: string; registered: boolean }>>('/notifications/devices', { deviceId, fcmToken }),
 
     /**
      * GET /api/v1/notifications
      */
-    list: async (page = 1, limit = 20, unreadOnly = false): Promise<ApiResponse<AppNotification[]>> => {
-      await delay(400);
-      let items = [...mockNotifications];
-      if (unreadOnly) {
-        items = items.filter(n => !n.read);
-      }
-      return {
-        success: true,
-        data: items,
-        meta: {
-          page,
-          limit,
-          total: items.length,
-          totalPages: 1,
-        },
-      };
-    },
+    list: (page = 1, limit = 20, unreadOnly = false): Promise<ApiResponse<AppNotification[]>> =>
+      get<ApiResponse<AppNotification[]>>('/notifications', { page, limit, unreadOnly }),
+
+    /**
+     * PUT /api/v1/notifications/:id/read
+     */
+    markRead: (id: string): Promise<ApiResponse<null>> =>
+      put<ApiResponse<null>>(`/notifications/${id}/read`),
   },
 };
