@@ -22,6 +22,11 @@ import HomeScreen from "../screens/HomeScreen";
 import PolicyScreen from "../screens/PolicyScreen";
 import ClaimsScreen from "../screens/ClaimsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import PlatformSelectionScreen from "../screens/auth/PlatformSelectionScreen";
+import IdentityVerificationScreen from "../screens/auth/IdentityVerificationScreen";
+import SelfieVerificationScreen from "../screens/auth/SelfieVerificationScreen";
+import AllSetScreen from "../screens/auth/AllSetScreen";
+import PolicySelectionScreen from "../screens/auth/PolicySelectionScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -85,6 +90,11 @@ export default function RootNavigator() {
             />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="SignUp" component={SignUpScreen} />
+            <Stack.Screen name="PlatformSelection" component={PlatformSelectionScreen} />
+            <Stack.Screen name="IdentityVerification" component={IdentityVerificationScreen} />
+            <Stack.Screen name="SelfieVerification" component={SelfieVerificationScreen} />
+            <Stack.Screen name="AllSet" component={AllSetScreen} />
+            <Stack.Screen name="PolicySelectionScreen" component={PolicySelectionScreen} />
             <Stack.Screen
               name="TwoFactorAuth"
               component={TwoFactorAuthScreen}
@@ -97,14 +107,6 @@ export default function RootNavigator() {
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen
-              name="TwoFactorAuth"
-              component={TwoFactorAuthScreen}
-            />
-            <Stack.Screen
-              name="BiometricSetup"
-              component={BiometricAuthSetupScreen}
-            />
             <Stack.Screen
               name="NotificationSettings"
               component={NotificationSettingsScreen}
