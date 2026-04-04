@@ -12,7 +12,7 @@ type PolicyTier = 'BASIC' | 'STANDARD' | 'PREMIUM';
 interface PolicyState {
   policies: Policy[];
   activePolicy: Policy | null;
-  currentQuote: PolicyQuote | null;
+  quotes: PolicyQuote[];
   selectedTier: PolicyTier;
   isLoading: boolean;
   isActivating: boolean;
@@ -32,7 +32,7 @@ const POLICIES_TTL = 120_000; // 2 minutes
 export const usePolicyStore = create<PolicyState>((set, get) => ({
   policies: [],
   activePolicy: null,
-  currentQuote: null,
+  quotes: [],
   selectedTier: 'STANDARD',
   isLoading: false,
   isActivating: false,
@@ -59,7 +59,7 @@ export const usePolicyStore = create<PolicyState>((set, get) => ({
     set({ isLoading: true });
     try {
       const res = await apiClient.policies.quote();
-      set({ currentQuote: res.quote, isLoading: false });
+      set({ quotes: res.quotes, isLoading: false });
     } catch (e) {
       set({ isLoading: false });
     }
@@ -120,7 +120,7 @@ export const usePolicyStore = create<PolicyState>((set, get) => ({
     set({
       policies: [],
       activePolicy: null,
-      currentQuote: null,
+      quotes: [],
       selectedTier: 'STANDARD',
       isLoading: false,
       isActivating: false,
