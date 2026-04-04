@@ -1,6 +1,12 @@
 # EarnGuard
 ### AI-Powered Parametric Income Protection for India's Delivery Partners
 
+> [!TIP]
+> **🚀 Technical Documentation Shortcuts:**
+> - 🏗️ **[Core Backend Architecture](docs/core_architecture.md)**: Deep-dive into the Node.js/Express backend, BullMQ/Redis worker lifecycle (like the 15-min disruption detection), and mock server integrations.
+> - 🧠 **[ML Pricing Architecture](docs/ml_architecture.md)**: Analysis of the XGBoost base pricing and Gemini 2.5 Flash risk assessment models.
+> - 📱 **[Mobile App Architecture](docs/mobile_architecture.md)**: Breakdown of the React Native client, Zustand state management, and API security model.
+
 ---
 
 ## Table of Contents
