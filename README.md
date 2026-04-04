@@ -26,12 +26,10 @@
    - [5.4 AI in the Admin Portal](#54-ai-in-the-admin-portal)  
 
 6. [Tech Stack](#6-tech-stack)  
-
-7. [Coverage Constraints & Golden Rules](#7-coverage-constraints--golden-rules)  
-
-8. [Key Differentiators](#8-key-differentiators)
-
-9. [Adversarial Defense & Anti-Spoofing Strategy](#9-adversarial-defense--anti-spoofing-strategy)
+7. [System Architecture](#7-system-architecture)  
+8. [Coverage Constraints & Golden Rules](#8-coverage-constraints--golden-rules)  
+9. [Key Differentiators](#9-key-differentiators)
+10. [Adversarial Defense & Anti-Spoofing Strategy](#10-adversarial-defense--anti-spoofing-strategy)
 
 ---
 
@@ -327,7 +325,67 @@ The admin web portal exposes ML outputs to the insurer team:
 
 ---
 
-## 7. Coverage Constraints & Golden Rules
+## 7. System Architecture
+
+EarnGuard is a distributed ecosystem consisting of four main services that work together to provide autonomous, data-driven insurance.
+
+### 7.1 High-Level Component Diagram
+
+```mermaid
+graph TD
+    subgraph Mobile_App ["Mobile App (React Native/Expo)"]
+        Zustand[Zustand Stores]
+        UI[Premium UI]
+    end
+
+    subgraph Backend_Infrastructure ["Backend Infrastructure (Node.js/Express)"]
+        API[Main API Server]
+        subgraph Background_Workers ["BullMQ Workers"]
+            DW[Disruption Worker]
+            MLW[ML Pricing Worker]
+            OW[Outbox Worker]
+        end
+        DB[(PostgreSQL)]
+        Redis[(Redis)]
+    end
+
+    subgraph ML_Services ["ML Services (FastAPI)"]
+        BaseModel[Base Price XGBoost]
+        RiskModel[Weekly Risk Gemini 2.5 Flash]
+    end
+
+    subgraph Mock_Ecosystem ["Mock Simulator (Node.js)"]
+        MockAPI[Mock Environment APIs]
+        MockDB[(Mock PostgreSQL)]
+    end
+
+    %% Interactions
+    Zustand -->|REST API| API
+    API <--> DB
+    API <--> Redis
+    
+    DW -->|Cron Trigger| Redis
+    DW -->|Poll Signals| MockAPI
+    DW -->|Process Claims| DB
+    
+    MLW -->|Poll Metrics| MockAPI
+    MLW -->|Fetch Prediction| ML_Services
+    MLW -->|Update Pricing| DB
+    
+    MockAPI <--> MockDB
+```
+
+### 7.2 Detailed Documentation
+
+For a deeper dive into the internal workings of each component, please refer to the following documentation:
+
+- 🏗️ **[Core Backend Architecture](docs/core_architecture.md)** — BullMQ workers, Redis connection, and disruption detection logic.
+- 🧠 **[ML Pricing Architecture](docs/ml_architecture.md)** — Detailed look at the XGBoost and Gemini 2.5 Flash models.
+- 📱 **[Mobile App Architecture](docs/mobile_architecture.md)** — Zustand state management and React Native structure.
+
+---
+
+## 8. Coverage Constraints & Golden Rules
 
 > ⚠️ These constraints are hard-coded into EarnGuard's product logic and cannot be overridden.
 
@@ -338,7 +396,7 @@ The admin web portal exposes ML outputs to the insurer team:
 
 ---
 
-## 8. Key Differentiators
+## 9. Key Differentiators
 
 - **Zero-touch claims** — parametric triggers mean workers never need to file a claim for covered events
 - **Hyper-local risk pricing** — premium recalculated weekly per zone, not per city or annually
@@ -349,7 +407,7 @@ The admin web portal exposes ML outputs to the insurer team:
 
 ---
 
-## 9. Adversarial Defense & Anti-Spoofing Strategy
+## 10. Adversarial Defense & Anti-Spoofing Strategy
 
 > 🚨 **Threat Scenario:** A coordinated ring of 500+ delivery workers uses GPS-spoofing applications to fake their location inside a severe weather zone while they are safely at home — triggering mass parametric payouts and draining the liquidity pool.
 
