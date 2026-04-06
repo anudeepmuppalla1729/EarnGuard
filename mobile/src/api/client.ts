@@ -12,7 +12,8 @@ import type {
 } from '../types';
 
 // ─── Base URL ─────────────────────────────────────────────────────────────────
-const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.36:3000') + '/api/v1';
+const BASE_URL =
+  (process.env.EXPO_PUBLIC_API_URL || "http://192.168.29.136:3000") + "/api/v1";
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const http: AxiosInstance = axios.create({
