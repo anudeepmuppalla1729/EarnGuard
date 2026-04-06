@@ -202,13 +202,13 @@ export const apiClient = {
     /**
      * POST /api/v1/policies/activate
      */
-    activate: (policyId: string, idempotencyKey: string): Promise<ApiResponse<{
+    activate: (tier: string, idempotencyKey: string): Promise<ApiResponse<{
       policyId: string;
       status: string;
       activatedAt: string;
       bankTransactionId: string;
     }>> =>
-      post<ApiResponse<any>>('/policies/activate', { policyId, idempotencyKey }),
+      post<ApiResponse<any>>('/policies/activate', { tier, idempotencyKey }),
   },
 
   // ── CLAIMS ──────────────────────────────────────────────────

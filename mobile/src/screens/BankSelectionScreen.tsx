@@ -28,12 +28,12 @@ export default function BankSelectionScreen() {
   const [processing, setProcessing] = useState(false);
 
   const handlePay = async () => {
-    if (!selectedBank || !policyId) return;
+    if (!selectedBank || !tierName) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setProcessing(true);
 
     try {
-      const success = await activatePolicy(policyId);
+      const success = await activatePolicy(tierName);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(

@@ -99,18 +99,10 @@ router.post('/quote', requireAuth, async (req: AuthRequest, res: Response): Prom
     const quotes = [];
     
     for (const opt of options) {
-      const policyId = uuidv4();
-      
-      // Save draft policy
-      await pool.query(`
-          INSERT INTO policies (id, worker_id, city_id, status, premium_amount, coverage_multiplier)
-          VALUES ($1, $2, $3, 'DRAFT', $4, $5)
-      `, [policyId, req.workerId, cityId, opt.premium_amount, opt.coverage_multiplier]);
-
       quotes.push({
-        policyId,
+        policyId: uuidv4(), // Kept simply so UI lists don't break key extraction
         tier: opt.tier,
-        base_price,
+        base_price: parseFloat((base_price * (opt.tier === 'BASIC' ? 1.0 : opt.tier === 'STANDARD' ? 1.2 : 1.5)).toFixed(2)),
         additional_price: additional_price,
         reason,
         premium_amount: opt.premium_amount
@@ -128,48 +120,62 @@ router.post('/quote', requireAuth, async (req: AuthRequest, res: Response): Prom
 
 const ActivateSchema = z.object({
   body: z.object({
-    policyId: z.string().uuid(),
+    tier: z.enum(['BASIC', 'STANDARD', 'PREMIUM']),
     idempotencyKey: z.string(),
   }),
 });
 
 router.post('/activate', requireAuth, validate(ActivateSchema), async (req: AuthRequest, res: Response): Promise<void> => {
-  const { policyId, idempotencyKey } = req.body;
+  const { tier, idempotencyKey } = req.body;
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
     
-    // Get policy & check state mapping
-    const policyResult = await client.query('SELECT * FROM policies WHERE id = $1 AND worker_id = $2 FOR UPDATE', [policyId, req.workerId]);
-    if (policyResult.rows.length === 0) {
+    // Check if user already has an active policy
+    const existingCheck = await client.query('SELECT id FROM policies WHERE worker_id = $1 AND status = $2', [req.workerId, 'ACTIVE']);
+    if (existingCheck.rows.length > 0) {
       await client.query('ROLLBACK');
-      res.status(404).json({ error: 'Policy not found' });
+      res.status(409).json({ error: 'Worker already has an active policy' });
       return;
     }
 
-    if (policyResult.rows[0].status === 'ACTIVE') {
-      await client.query('ROLLBACK');
-      res.status(409).json({ error: 'Policy already activated' });
-      return;
+    // Dynamically fetch City Market attributes
+    const pricingRes = await client.query(`
+        SELECT cp.base_price, cp.weekly_additional_price, w.city_id
+        FROM workers w
+        JOIN city_pricing cp ON w.city_id = cp.city_id
+        WHERE w.id = $1
+    `, [req.workerId]);
+
+    let base_price = 150.00;
+    let additional_price = 0.0;
+    let cityId = 'C1';
+
+    if (pricingRes.rows.length > 0) {
+        base_price = parseFloat(pricingRes.rows[0].base_price);
+        additional_price = parseFloat(pricingRes.rows[0].weekly_additional_price);
+        cityId = pricingRes.rows[0].city_id;
     }
 
-    if (policyResult.rows[0].status !== 'DRAFT') {
-      await client.query('ROLLBACK');
-      res.status(400).json({ error: 'Invalid policy state' });
-      return;
-    }
-
-    const premium = policyResult.rows[0].premium_amount;
-
+    const multiplierMap: Record<string, { priceMult: number, coverage: number }> = {
+      BASIC: { priceMult: 1.0, coverage: 0.2 },
+      STANDARD: { priceMult: 1.2, coverage: 0.4 },
+      PREMIUM: { priceMult: 1.5, coverage: 0.6 }
+    };
+    
+    const config = multiplierMap[tier];
+    const premium = parseFloat(((base_price * config.priceMult) + additional_price).toFixed(2));
+    
     // MOCK BANK INTEGRATION
-    // Wallet ledger is ONLY for claims payouts. Premium is paid explicitly via Bank.
     console.log(`[MockBank] Processing external card payment. Premium: ₹${premium} | Ref: ${idempotencyKey}`);
 
-    // Activate Policy
+    const policyId = uuidv4();
+    // ACTUALLY INSERT the policy as active now that it's paid
     await client.query(`
-      UPDATE policies SET status = 'ACTIVE', activated_at = NOW() WHERE id = $1
-    `, [policyId]);
+      INSERT INTO policies (id, worker_id, city_id, status, premium_amount, coverage_multiplier, activated_at, created_at)
+      VALUES ($1, $2, $3, 'ACTIVE', $4, $5, NOW(), NOW())
+    `, [policyId, req.workerId, cityId, premium, config.coverage]);
 
     await client.query('COMMIT');
     res.json({

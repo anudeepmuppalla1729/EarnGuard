@@ -21,7 +21,7 @@ interface PolicyState {
   // Actions
   fetchPolicies: () => Promise<void>;
   fetchQuote: () => Promise<void>;
-  activatePolicy: (policyId: string) => Promise<boolean>;
+  activatePolicy: (tier: PolicyTier) => Promise<boolean>;
   setSelectedTier: (tier: PolicyTier) => void;
   loadWithCache: () => Promise<void>;
   reset: () => void;
@@ -65,26 +65,20 @@ export const usePolicyStore = create<PolicyState>((set, get) => ({
     }
   },
 
-  activatePolicy: async (policyId) => {
+  activatePolicy: async (tier: PolicyTier) => {
     set({ isActivating: true });
     try {
-      const idempotencyKey = `activate-${policyId}-${Date.now()}`;
-      const res = await apiClient.policies.activate(policyId, idempotencyKey);
+      const idempotencyKey = `activate-${tier}-${Date.now()}`;
+      const res = await apiClient.policies.activate(tier, idempotencyKey);
       if (res.success) {
-        // Try to find from policies list first, then fallback to quotes
-        const state = get();
-        const existingPolicy = state.policies.find(p => p.id === policyId);
-        const matchingQuote = state.quotes.find(q => q.policyId === policyId);
+        
+        const matchingQuote = get().quotes.find(q => q.tier === tier);
+        
+        // Build the coverage multiplier from the tier
+        const tierMultiplier = tier === 'BASIC' ? 0.2 : tier === 'STANDARD' ? 0.4 : 0.6;
 
-        // Build the coverage multiplier from the quote tier
-        const tierMultiplier = matchingQuote
-          ? (matchingQuote.tier === 'BASIC' ? 0.2 : matchingQuote.tier === 'STANDARD' ? 0.4 : 0.6)
-          : 0;
-
-        const activatedPolicy: Policy = existingPolicy
-          ? { ...existingPolicy, status: 'ACTIVE' as const, activatedAt: res.data.activatedAt }
-          : {
-              id: policyId,
+        const activatedPolicy: Policy = {
+              id: res.data.policyId,
               workerId: '',
               status: 'ACTIVE' as const,
               premiumAmount: matchingQuote?.premium_amount || 0,
@@ -93,13 +87,11 @@ export const usePolicyStore = create<PolicyState>((set, get) => ({
               createdAt: new Date().toISOString(),
             };
 
-        set({
-          policies: state.policies.map(p =>
-            p.id === policyId ? { ...p, status: 'ACTIVE' as const, activatedAt: res.data.activatedAt } : p
-          ),
+        set(state => ({
+          policies: [activatedPolicy, ...state.policies],
           activePolicy: activatedPolicy,
           isActivating: false,
-        });
+        }));
         return true;
       }
       set({ isActivating: false });
