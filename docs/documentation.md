@@ -301,9 +301,9 @@ Compute dynamic premium automatically mapping the native ML XGBoost Engine array
 ## Activate Policy
 
 **Endpoint Name:** Activate Policy
-**Purpose:** Convert DRAFT → ACTIVE by simulating external bank payment. (Wallet is ONLY used for final payouts, not premium deduction).
+**Purpose:** Generate and definitively create an ACTIVE policy dynamically against real-time ML prices. (No DRAFT policies are stored beforehand to prevent DB bloat.)
 
-**POST** `/api/v1/policies/{id}/activate`
+**POST** `/api/v1/policies/activate`
 **Auth:** Yes (WORKER)
 
 ---
@@ -312,14 +312,15 @@ Compute dynamic premium automatically mapping the native ML XGBoost Engine array
 
 ```json
 {
+  "tier": "BASIC | STANDARD | PREMIUM",
   "idempotencyKey": "uuid"
 }
 ```
 
 ### Validation Rules
 
-* `id` must exist and belong to authenticated worker
-* Policy must be `DRAFT`
+* The worker must not already have an `ACTIVE` policy
+* `tier` must be a valid policy tier
 * Idempotency key required (prevent double charge)
 
 ---
@@ -342,17 +343,16 @@ Compute dynamic premium automatically mapping the native ML XGBoost Engine array
 
 ### Errors
 
-| Code                     | Reason              |
-| ------------------------ | ------------------- |
-| 404 POLICY_NOT_FOUND     | Invalid policy      |
-| 409 INVALID_POLICY_STATE | Already ACTIVE      |
-| 400 PAYMENT_FAILED       | Mock bank rejected  |
+| Code                     | Reason                               |
+| ------------------------ | ------------------------------------ |
+| 409 INVALID_POLICY_STATE | Worker already has an active policy  |
+| 400 PAYMENT_FAILED       | Mock bank rejected                   |
 
 ---
 
 ### Notes
 
-* Policy status is the source of truth for idempotency (an already ACTIVE policy returns conflict).
+* Because we no longer store DRAFT quotes, this endpoint is fully stateless and dynamically builds and verifies the math using the background ML `city_pricing` table before insertion.
 
 ---
 
