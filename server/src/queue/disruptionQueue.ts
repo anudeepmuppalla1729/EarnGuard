@@ -14,15 +14,15 @@ export const scheduleDisruptionDetection = async () => {
         await disruptionQueue.removeRepeatableByKey(job.key);
     }
     
-    // Add job running every 15 minutes
+    // Add job running every 1 hour
     await disruptionQueue.add(
         'interval-detection',
         { trigger: 'cron' },
         {
             repeat: {
-                pattern: '*/15 * * * *', // every 15 mins
+                pattern: '0 * * * *', // every 1 hour on the hour
             }
         }
     );
-    console.log('BullMQ: Scheduled Disruption Detection cron (every 15 mins)');
+    console.log('BullMQ: Scheduled Disruption Detection cron (every 1 hour)');
 };
