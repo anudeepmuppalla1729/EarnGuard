@@ -147,8 +147,12 @@ CREATE TABLE IF NOT EXISTS outbox_events (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- DUMMY SEED DATA FOR TESTING (Hyderabad 2 Zones)
+-- DUMMY SEED DATA FOR TESTING (Hyderabad Zones)
 INSERT INTO cities (id, name) VALUES ('C1', 'Hyderabad');
 INSERT INTO zones (id, city_id, name) VALUES ('Z1', 'C1', 'Madhapur Dark Store');
 INSERT INTO zones (id, city_id, name) VALUES ('Z2', 'C1', 'Kondapur Dark Store');
+INSERT INTO zones (id, city_id, name) VALUES ('Z3', 'C1', 'Gachibowli Dark Store');
+INSERT INTO zones (id, city_id, name) VALUES ('Z4', 'C1', 'Jubilee Hills Dark Store');
+INSERT INTO zones (id, city_id, name) VALUES ('Z5', 'C1', 'Banjara Hills Dark Store');
+INSERT INTO zones (id, city_id, name) VALUES ('Z6', 'C1', 'Hitec City Dark Store');
 INSERT INTO city_pricing (city_id, base_price, weekly_additional_price) VALUES ('C1', 120.00, 15.50);
