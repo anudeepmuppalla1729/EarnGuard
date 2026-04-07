@@ -1290,7 +1290,7 @@ premium =
 
 ## STEP 2: Collect Signals (Every Interval)
 
-Run this every 15 min / 30 min.
+Run this every hour.
 
 ### 🔹 For EACH ZONE (Zone-Level Signals):
 

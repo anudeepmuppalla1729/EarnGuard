@@ -26,7 +26,7 @@ EarnGuard uses an "Autonomous Insurance" model where state transitions (like cla
 
 ### 1. Disruption Detection Worker (`disruptionWorker.ts`)
 The heartbeat of the system.
-- **Interval**: Runs every 15 minutes (configurable via cron).
+- **Interval**: Runs every 1 hour (configurable via cron).
 - **Process**:
     1.  **Sensing**: Polls the **Mock Simulator** for live weather, news, and platform activity in target zones.
     2.  **Risk Analysis**: Computes a hybrid risk score (0.0 - 1.0) based on headline sentiment (heuristic/LLM) and environmental triggers (heavy rain, delivery delays).
@@ -67,5 +67,36 @@ The background workers rely on the **Mock Simulator (Port 4000)** to function. T
     - `POST /platform/active-workers`: Real-time worker counts to verify local platform health.
     - `POST /bank/pay`: Mocked bank debit flows for premium payments.
 
-> [!NOTE]
 > The segregation of the Mock Server ensures that the core backend logic can be tested against deterministic scenarios (like forcing a flood) without needing live external API keys.
+
+---
+
+## Recent Architecture Upgrades (Engine Refactor)
+
+We've completely overhauled the disruption engine, making it vastly more intelligent, flexible, and tied directly into real-world hourly metrics rather than static heuristic assumptions.
+
+### 🚀 What We Accomplished
+
+#### 1. Hourly Granularity vs. 15-Minute Polling
+The system previously polled for disruption signals every 15 minutes. We have refactored both the BullMQ cron job (`0 * * * *`) and backend worker logic to operate strictly on an **Hourly cadence**.
+*   **Why?** This perfectly aligns with calculating actual "Hourly Income Loss" for workers across different hours of the day (e.g., 4 PM pays differently than 11 PM), leading to far more reliable structural payouts.
+
+#### 2. Prolog Engine Validation for "News" Disruptions (`tau-prolog`)
+We replaced rudimentary regex heuristics for social and environmental triggers with a declarative logic engine: **Prolog**.
+*   The worker now feeds parsed news headlines into an embedded Prolog rule engine (`rules.ts`). 
+*   Prolog uses structural facts (e.g., `disruption_score(flood, 0.9)`) and logic queries to evaluate multi-event sentences and definitively pull out the mathematically highest risk metric dynamically.
+*   **Fixes Applied**: We securely bypassed tau-prolog limitation constraints by structuring strict quoted atoms, tuning memory depth to `500,000`, and properly managing execution cuts `!` to avoid recursive infinite loops.
+
+#### 3. Individualized Worker Target Payouts
+Instead of utilizing a static zone median income to decide how much gig workers lose, we connected the Simulation Server endpoints to return:
+*   Deterministic time-of-day driven hourly rates for individual workers. 
+*   If a disruption triggers, we strictly utilize the worker's personalized expected rate for that specific hour of the day when issuing the compensatory payout via the insurance wallet.
+
+#### 4. Payout Logic Evolution: The "Pending Assessment" state
+We implemented safety buffers against false-positives:
+*   A high risk score alone (e.g., 0.9 due to a Cyclone) will **NOT automatically pay out**. 
+*   If the local platform's `orderDropPercentage` does not confirm structural drops (>0), the claim is instead inserted as **PENDING** rather than APPROVED. These queued claims represent occurrences where the external world says "High Risk", but the platform data says "Business as usual", preserving capital pool integrity for future manual auditing.
+
+#### 5. Architectural Coverage Scale & Cleanup
+*   Added 4 new structural zones to the database: (`Gachibowli`, `Jubilee Hills`, `Banjara Hills`, and `Hitec City`).
+*   Removed deprecated static DRAFT logic checks across API endpoints and modernized the TESTING Suite. Every Integration and Machine Learning Jest test now structurally adheres to the newly designed Zod Validation pipelines and dynamic policy initialization protocols. All tests natively pass flawlessly!

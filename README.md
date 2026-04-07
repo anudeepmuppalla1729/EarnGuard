@@ -3,7 +3,7 @@
 
 > [!TIP]
 > **Technical Documentation Shortcuts:**
-> - **[Core Backend Architecture](docs/core_architecture.md)**: Deep-dive into the Node.js/Express backend, BullMQ/Redis worker lifecycle (like the 15-min disruption detection), and mock server integrations.
+> - **[Core Backend Architecture](docs/core_architecture.md)**: Deep-dive into the Node.js/Express backend, BullMQ/Redis worker lifecycle (like the hourly disruption detection), and mock server integrations.
 > - **[ML Pricing Architecture](docs/ml_architecture.md)**: Analysis of the XGBoost base pricing and Risk assessment models.
 > - **[Mobile App Architecture](docs/mobile_architecture.md)**: Breakdown of the React Native client, Zustand state management, and API security model.
 
@@ -36,6 +36,7 @@
 8. [Coverage Constraints & Golden Rules](#8-coverage-constraints--golden-rules)  
 9. [Key Differentiators](#9-key-differentiators)
 10. [Adversarial Defense & Anti-Spoofing Strategy](#10-adversarial-defense--anti-spoofing-strategy)
+11. [Disruption Engine Refactor & Intelligence Upgrade](#11-disruption-engine-refactor--intelligence-upgrade)
 
 ---
 
@@ -182,7 +183,7 @@ EarnGuard covers the income lost during a specific disruption interval using a *
 Payout For a Disruption Interval  =  Base Coverage Amount  +  Risk-Adjusted Amount
 
 Where:
-  Interval Loss          =  Zone median income rate (Rs./hr)  ×  Duration of disruption (hrs)
+  Interval Loss          =  Individualized Worker Hourly Income (Rs./hr)  ×  Duration of disruption (hrs)
 
   Base Coverage Amount   =  k  ×  Interval Loss
                             (k is a fixed coverage multiplier, e.g. 0.2 – 0.6)
@@ -220,7 +221,7 @@ A parametric trigger is an **objective, externally verifiable event** that autom
 | Trigger Type | Signal Source | Example Condition | Auto-Payout? |
 |---|---|---|---|
 | Environmental | Weather API (IMD / OpenWeatherMap) | Heavy rain > 50mm/hr for 3+ hrs in zone | Yes |
-| Social disruption | News NLP model (headlines, social signals) | Strike or curfew detected in delivery zone | Yes |
+| Social disruption | News Prolog rule engine | Strike or curfew detected in delivery zone | Pending Manual Verification if order drop is zero, else Yes |
 | Platform outage | Platform API (order drop rate, app status) | Order volume drops >60% in zone for 2 hrs | Yes |
 | Manual claim | Worker submission via app | Worker reports income loss manually | After validation |
 
@@ -321,7 +322,7 @@ The admin web portal exposes ML outputs to the insurer team:
 | Mobile app (worker) | React Native (Android + iOS) | EarnGuard worker app |
 | Admin web portal | React + Vite, TailwindCSS | Insurer / ops dashboard |
 | Backend API | Node.js / Express | Business logic, orchestration, REST API |
-| ML services | Python (FastAPI), scikit-learn, XGBoost, Google Gemini 2.5 Flash API | Base price prediction, NLP risk assessment, API routing |
+| ML / Logic services | Python (FastAPI), scikit-learn, XGBoost, Google Gemini, Tau-Prolog | Base price prediction, LLM risk assessment, Prolog structural NLP risk |
 | Database | PostgreSQL (structured data), Redis (caching / queues) | Worker profiles, claims, premiums, zone events |
 | External APIs | OpenWeatherMap / IMD (mock), NewsAPI (mock), Platform API (mock) | Weather, news, platform signal ingestion |
 | Payment | Stripe sandbox / Razorpay mock | Payout processing, UPI integration |
@@ -560,3 +561,35 @@ Claim arrives (auto-trigger or manual)
 *EarnGuard — Guidewire DEVTrails 2026 — Phase 1 Submission*  
 *Coverage: Income loss only | Pricing: Weekly | Persona: Q-commerce delivery partners (Zepto, Blinkit)*  
 *Anti-spoofing layer added: March 2026 — in response to coordinated GPS fraud threat*
+
+---
+
+## 11. Disruption Engine Refactor & Intelligence Upgrade
+
+We've completely overhauled the disruption engine, making it vastly more intelligent, flexible, and tied directly into real-world hourly metrics rather than static heuristic assumptions.
+
+### 🚀 What We Accomplished
+
+#### 1. Hourly Granularity vs. 15-Minute Polling
+The system previously polled for disruption signals every 15 minutes. We have refactored both the BullMQ cron job (`0 * * * *`) and backend worker logic to operate strictly on an **Hourly cadence**.
+*   **Why?** This perfectly aligns with calculating actual "Hourly Income Loss" for workers across different hours of the day (e.g., 4 PM pays differently than 11 PM), leading to far more reliable structural payouts.
+
+#### 2. Prolog Engine Validation for "News" Disruptions (`tau-prolog`)
+We replaced rudimentary regex heuristics for social and environmental triggers with a declarative logic engine: **Prolog**.
+*   The worker now feeds parsed news headlines into an embedded Prolog rule engine (`rules.ts`). 
+*   Prolog uses structural facts (e.g., `disruption_score(flood, 0.9)`) and logic queries to evaluate multi-event sentences and definitively pull out the mathematically highest risk metric dynamically.
+*   **Fixes Applied**: We securely bypassed tau-prolog limitation constraints by structuring strict quoted atoms, tuning memory depth to `500,000`, and properly managing execution cuts `!` to avoid recursive infinite loops.
+
+#### 3. Individualized Worker Target Payouts
+Instead of utilizing a static zone median income to decide how much gig workers lose, we connected the Simulation Server endpoints to return:
+*   Deterministic time-of-day driven hourly rates for individual workers. 
+*   If a disruption triggers, we strictly utilize the worker's personalized expected rate for that specific hour of the day when issuing the compensatory payout via the insurance wallet.
+
+#### 4. Payout Logic Evolution: The "Pending Assessment" state
+We implemented safety buffers against false-positives:
+*   A high risk score alone (e.g., 0.9 due to a Cyclone) will **NOT automatically pay out**. 
+*   If the local platform's `orderDropPercentage` does not confirm structural drops (>0), the claim is instead inserted as **PENDING** rather than APPROVED. These queued claims represent occurrences where the external world says "High Risk", but the platform data says "Business as usual", preserving capital pool integrity for future manual auditing.
+
+#### 5. Architectural Coverage Scale & Cleanup
+*   Added 4 new structural zones to the database: (`Gachibowli`, `Jubilee Hills`, `Banjara Hills`, and `Hitec City`).
+*   Removed deprecated static DRAFT logic checks across API endpoints and modernized the TESTING Suite. Every Integration and Machine Learning Jest test now structurally adheres to the newly designed Zod Validation pipelines and dynamic policy initialization protocols. All tests natively pass flawlessly!
