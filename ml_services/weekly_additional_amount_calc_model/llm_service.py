@@ -81,7 +81,7 @@ def analyze_risk(weather: Dict[str, Any], news_summary: str, outages: Dict[str, 
 
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemma-4-31b-it',
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0,
