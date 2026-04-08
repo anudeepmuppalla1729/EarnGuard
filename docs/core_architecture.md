@@ -77,9 +77,10 @@ We've completely overhauled the disruption engine, making it vastly more intelli
 
 ### 🚀 What We Accomplished
 
-#### 1. Hourly Granularity vs. 15-Minute Polling
-The system previously polled for disruption signals every 15 minutes. We have refactored both the BullMQ cron job (`0 * * * *`) and backend worker logic to operate strictly on an **Hourly cadence**.
-*   **Why?** This perfectly aligns with calculating actual "Hourly Income Loss" for workers across different hours of the day (e.g., 4 PM pays differently than 11 PM), leading to far more reliable structural payouts.
+#### 1. Decoupled 3-Minute Detection vs Hourly Payouts
+The system operates on an asynchronously coupled cycle:
+*   **Sensing (Every 3 minutes)**: The `disruptionWorker` natively polls simulation metrics (weather, platform drops, traffic) and logs granular transient anomalies into the immutable `zone_risk_snapshots` cache. This captures rapid weather spikes and brief local emergencies.
+*   **Execution (Hourly Cadence)**: The `payoutWorker` executes on the top of the hour explicitly. It calculates the mathematically smoothed risk averages over the last 60 minutes (`AVG(risk_score)` and `MAX(order_drop_percentage)`) from the snapshots. If the sustained average surpasses `0.65`, structural payouts are triggered sequentially alongside a clean database scale-down (wiping older 3-minute inputs).
 
 #### 2. Prolog Engine Validation for "News" Disruptions (`tau-prolog`)
 We replaced rudimentary regex heuristics for social and environmental triggers with a declarative logic engine: **Prolog**.
