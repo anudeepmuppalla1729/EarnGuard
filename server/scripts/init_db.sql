@@ -147,6 +147,25 @@ CREATE TABLE IF NOT EXISTS outbox_events (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- 2.12 Low-Latency Granular Risk Snapshots (3 minute interval data)
+CREATE TABLE IF NOT EXISTS zone_risk_snapshots (
+    id UUID PRIMARY KEY,
+    zone_id TEXT REFERENCES zones(id) ON DELETE CASCADE,
+    risk_score NUMERIC(4,2),
+    order_drop_percentage NUMERIC(5,2),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 2.13 High-Latency Hourly Aggregation Logs
+CREATE TABLE IF NOT EXISTS hourly_risk_analytics (
+    id UUID PRIMARY KEY,
+    zone_id TEXT REFERENCES zones(id) ON DELETE CASCADE,
+    avg_risk_score NUMERIC(4,2),
+    max_order_drop_percentage NUMERIC(5,2),
+    hour_timestamp TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- DUMMY SEED DATA FOR TESTING (Hyderabad Zones)
 INSERT INTO cities (id, name) VALUES ('C1', 'Hyderabad');
 INSERT INTO zones (id, city_id, name) VALUES ('Z1', 'C1', 'Madhapur Dark Store');

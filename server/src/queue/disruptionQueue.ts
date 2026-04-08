@@ -20,9 +20,9 @@ export const scheduleDisruptionDetection = async () => {
         { trigger: 'cron' },
         {
             repeat: {
-                pattern: '0 * * * *', // every 1 hour on the hour
+                pattern: '*/3 * * * *', // every 3 minutes
             }
         }
     );
-    console.log('BullMQ: Scheduled Disruption Detection cron (every 1 hour)');
+    console.log('BullMQ: Scheduled Disruption Detection cron (every 3 minutes)');
 };
