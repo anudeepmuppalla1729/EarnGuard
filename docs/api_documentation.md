@@ -1290,7 +1290,7 @@ premium =
 
 ## STEP 2: Collect Signals (Every Interval)
 
-Run this every 15 min / 30 min.
+Run this every hour.
 
 ### 🔹 For EACH ZONE (Zone-Level Signals):
 
@@ -1405,3 +1405,44 @@ riskAdjusted = remainingLoss * riskScore
 payout = min(baseCoverage + riskAdjusted, policy.max_payout)
 ```
 
+---
+
+# 7. MOCK SIMULATOR APIs (PORT 4000)
+
+The Mock Simulator (`simulation_servers`) provides deterministic environmental data mimicking third-party services.
+
+## Data Access Endpoints
+
+| Method | Endpoint | Purpose |
+| ------ | -------- | ------- |
+| **GET** | `/weather?cityId=C1` | Returns latest weather state |
+| **GET** | `/platform?zoneId=Z1` | Returns platform delays and drops |
+| **GET** | `/platform/workers/:id` | Worker status lookup |
+| **GET** | `/platform/workers/:id/income-stats?hour=15` | Deterministic hourly income based on worker and time |
+| **POST** | `/platform/workers/lookup` | Simulated platform API assigning IDs based on mobile |
+| **POST** | `/platform/active-workers?zoneId=Z1` | Validates & returns online workers in a zone |
+| **GET** | `/news?cityId=C1` | Returns local headlines |
+| **GET** | `/platform/outages?city=C1` | Returns platform outage counts and duration |
+| **GET** | `/traffic?zoneId=Z1` | Returns traffic severity |
+| **GET** | `/market` | Returns simulated economic markers for ML |
+| **GET** | `/bank/accounts` | Returns mock bank accounts |
+| **POST** | `/bank/pay` | Simulates bank debit processing |
+
+## Admin Control Endpoints
+
+| Method | Endpoint | Purpose |
+| ------ | -------- | ------- |
+| **POST** | `/admin/weather` | Force inject weather conditions (for testing triggers) |
+| **POST** | `/admin/platform` | Force inject platform order drops |
+| **POST** | `/admin/news` | Force inject news headlines |
+| **POST** | `/admin/traffic` | Force inject traffic severity |
+
+---
+
+# 8. ML SERVICES APIs (PORT 8000)
+
+| Method | Endpoint | Purpose |
+| ------ | -------- | ------- |
+| **POST** | `/api/v1/predict/monthly` | Predicts base monthly/weekly price using XGBoost historic data |
+| **POST** | `/calculate-weekly-price` | Computes Risk Additional Adjustments via Gemini LLM Risk Engine |
+| **GET**  | `/health` | Verify LLM Gemini API connection health |

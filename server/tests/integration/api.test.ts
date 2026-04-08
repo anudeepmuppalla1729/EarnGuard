@@ -14,8 +14,8 @@ describe('Integration Tests: Main API Routes', () => {
         mockWorkerId = uuidv4();
         // Insert dummy worker spanning into Z1 organically
         await pool.query(`
-            INSERT INTO workers (id, email, password_hash, name, city_id, zone_id, platform)
-            VALUES ($1, 'driver_test_99@blinkit.com', 'hashed123', 'Integration Hero', 'C1', 'Z1', 'BLINKIT')
+            INSERT INTO workers (id, platform_worker_id, email, password_hash, name, city_id, zone_id, platform)
+            VALUES ($1, 'WK-TEST-99', 'driver_test_99@blinkit.com', 'hashed123', 'Integration Hero', 'C1', 'Z1', 'BLINKIT')
         `, [mockWorkerId]);
 
         // Setup mock JWT token natively matched to process.env or fallback securely
@@ -31,12 +31,13 @@ describe('Integration Tests: Main API Routes', () => {
                 name: 'New Zepto Driver',
                 city_id: 'C1',
                 zone_id: 'Z1',
+                mobile: '9999999999',
                 platform: 'ZEPTO'
             });
 
-        expect(res.status).toBe(200);
+        expect(res.status).toBe(201);
         expect(res.body.success).toBe(true);
-        expect(res.body.id).toBeDefined();
+        expect(res.body.data.id).toBeDefined();
     });
 
     it('POST /api/v1/auth/login - Should safely mint JWT credentials mapping Bcrypt hashes natively', async () => {
@@ -48,8 +49,8 @@ describe('Integration Tests: Main API Routes', () => {
             });
 
         expect(res.status).toBe(200);
-        expect(res.body.token).toBeDefined();
-        expect(res.body.workerId).toBeDefined();
+        expect(res.body.data.accessToken).toBeDefined();
+        // Since login endpoint only returns accessToken, refreshToken, expiresIn, no need to check workerId
     });
 
     it('GET /api/v1/workers/me - Should fetch blank generic worker profile natively', async () => {
@@ -70,9 +71,9 @@ describe('Integration Tests: Main API Routes', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(res.body.quote.policyId).toBeDefined();
+        expect(res.body.quotes[0].policyId).toBeDefined();
         
-        mockPolicyId = res.body.quote.policyId; // Saving for the activation test natively
+        mockPolicyId = res.body.quotes[0].policyId; // Saving for the activation test natively
     });
 
     it('POST /api/v1/policies/activate - Should dynamically activate the DRAFT logic safely avoiding DB lock conflicts natively', async () => {
@@ -80,16 +81,17 @@ describe('Integration Tests: Main API Routes', () => {
             .post('/api/v1/policies/activate')
             .set('Authorization', `Bearer ${validToken}`)
             .send({ 
-                policyId: mockPolicyId,
+                tier: 'BASIC',
                 idempotencyKey: uuidv4()
             });
 
         // 200 OK because we mocked the Bank Transaction positively
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
+        expect(res.body.data.policyId).toBeDefined();
 
         // Prove via Database Postgres query that state mutated cleanly
-        const policyCheck = await pool.query('SELECT status FROM policies WHERE id = $1', [mockPolicyId]);
+        const policyCheck = await pool.query('SELECT status FROM policies WHERE id = $1', [res.body.data.policyId]);
         expect(policyCheck.rows[0].status).toBe('ACTIVE');
     });
 
@@ -98,12 +100,12 @@ describe('Integration Tests: Main API Routes', () => {
             .post('/api/v1/policies/activate')
             .set('Authorization', `Bearer ${validToken}`)
             .send({ 
-                policyId: mockPolicyId,
+                tier: 'BASIC',
                 idempotencyKey: uuidv4() // Brand new key, but policy is same
             });
 
         // Natively trapped via conflict error since status already shifted!
         expect(res.status).toBe(409);
-        expect(res.body.error).toBe('Policy already activated');
+        expect(res.body.error).toBe("Worker already has an active policy");
     });
 });

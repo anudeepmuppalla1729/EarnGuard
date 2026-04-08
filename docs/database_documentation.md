@@ -51,6 +51,16 @@ The core of our dynamic risk modeling revolves around splitting metropolitan are
     *   `max_payout`: A mathematically constrained ceiling limit organically locking payout amounts.
 *   **Relations**: Tied permanently to a `worker_id` and the `city_id`.
 
+### **`zone_risk_snapshots`**
+*   **Purpose**: Logs highly volatile raw situational data (disruptions) mapped to physical zones safely isolated from asynchronous payment loops. Gathered strictly every 3 minutes.
+*   **Fields**: `risk_score` NUMERIC, `order_drop_percentage` NUMERIC.
+*   **Relations**: Tied permanently to `zones`.
+
+### **`hourly_risk_analytics`**
+*   **Purpose**: Records mathematically smoothed (aggregated) anomalies (e.g. `AVG(risk_score)`) over a rolling hour. Payout computations strictly lock on this table.
+*   **Fields**: `avg_risk_score` NUMERIC, `max_order_drop_percentage` NUMERIC, `hour_timestamp` TIMESTAMP.
+*   **Relations**: Tied permanently to `zones`.
+
 ---
 
 ## 3. Asynchronous Claim Lifecycles & Finance
