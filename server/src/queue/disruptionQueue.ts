@@ -1,10 +1,10 @@
 import { Queue } from 'bullmq';
-import { connection } from './redis';
+import { redisConfig } from './redis';
 
 export const DISRUPTION_QUEUE_NAME = 'disruption-detection';
 
 // The Queue instance where we add jobs
-export const disruptionQueue = new Queue(DISRUPTION_QUEUE_NAME, { connection });
+export const disruptionQueue = new Queue(DISRUPTION_QUEUE_NAME, { connection: redisConfig });
 
 // Helper to start the cron
 export const scheduleDisruptionDetection = async () => {

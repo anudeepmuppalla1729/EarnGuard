@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { connection } from '../queue/redis';
+import { redisConfig } from '../queue/redis';
 import { DISRUPTION_QUEUE_NAME } from '../queue/disruptionQueue';
 import { pool } from '../db';
 import { v4 as uuidv4 } from 'uuid';
@@ -200,4 +200,4 @@ export const disruptionWorker = new Worker(DISRUPTION_QUEUE_NAME, async (job: Jo
     } finally {
         client.release();
     }
-}, { connection });
+}, { connection: redisConfig });

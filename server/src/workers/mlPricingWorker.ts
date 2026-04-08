@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { connection } from '../queue/redis';
+import { redisConfig } from '../queue/redis';
 import { PRICING_QUEUE_NAME } from '../queue/pricingQueue';
 import { pool } from '../db';
 
@@ -143,4 +143,4 @@ export const mlPricingWorker = new Worker(PRICING_QUEUE_NAME, async (job: Job) =
     } finally {
         client.release();
     }
-}, { connection });
+}, { connection: redisConfig });
