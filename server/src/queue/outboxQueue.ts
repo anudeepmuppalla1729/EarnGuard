@@ -1,9 +1,9 @@
 import { Queue } from 'bullmq';
-import { connection } from './redis';
+import { redisConfig } from './redis';
 
 export const OUTBOX_QUEUE_NAME = 'outbox-sweeper';
 
-export const outboxQueue = new Queue(OUTBOX_QUEUE_NAME, { connection });
+export const outboxQueue = new Queue(OUTBOX_QUEUE_NAME, { connection: redisConfig });
 
 export const scheduleOutboxSweeper = async () => {
     // Clear dead recurring jobs

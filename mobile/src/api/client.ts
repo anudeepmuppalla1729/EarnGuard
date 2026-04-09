@@ -11,8 +11,13 @@ import type {
   AppNotification, PolicyQuote, AuthTokens, ApiResponse, ApiQuoteResponse,
 } from '../types';
 
+import Constants from 'expo-constants';
+
 // ─── Base URL ─────────────────────────────────────────────────────────────────
-const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.36:3000') + '/api/v1';
+const debuggerHost = Constants.expoConfig?.hostUri;
+const localIp = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
+console.log(localIp)
+const BASE_URL = `http://${localIp}:3000/api/v1`;
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const http: AxiosInstance = axios.create({
@@ -201,13 +206,13 @@ export const apiClient = {
     /**
      * POST /api/v1/policies/activate
      */
-    activate: (policyId: string, idempotencyKey: string): Promise<ApiResponse<{
+    activate: (tier: string, idempotencyKey: string): Promise<ApiResponse<{
       policyId: string;
       status: string;
       activatedAt: string;
       bankTransactionId: string;
     }>> =>
-      post<ApiResponse<any>>('/policies/activate', { policyId, idempotencyKey }),
+      post<ApiResponse<any>>('/policies/activate', { tier, idempotencyKey }),
   },
 
   // ── CLAIMS ──────────────────────────────────────────────────

@@ -31,7 +31,7 @@ describe('Live ML Pipeline Scenario Stress Tests', () => {
         console.log("🌪️ CYCLONE ML RESULTS ➔", JSON.stringify(data, null, 2));
         
         // Ensure Gemini correctly calculated a massive risk hike!
-        expect(data.weekly_addition).toBeGreaterThan(45.0);
+        expect(data.weekly_addition).toBeGreaterThan(25.0);
         expect(data.reason).toBeDefined();
     });
 

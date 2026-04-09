@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import {
   Timer,
   CheckCircle2,
   Zap,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { SharedHeader } from "../components/SharedHeader";
@@ -34,9 +36,9 @@ import Animated, {
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = SCREEN_WIDTH * 0.78;
-const CARD_OVERLAP = SCREEN_WIDTH * 0.08;
-const SNAP_INTERVAL = CARD_WIDTH - CARD_OVERLAP;
-const SPACER_WIDTH = (SCREEN_WIDTH - CARD_WIDTH) / 2 + CARD_OVERLAP / 2;
+const CARD_GAP = 16;
+const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
+const SPACER_WIDTH = (SCREEN_WIDTH - CARD_WIDTH) / 2 - CARD_GAP / 2;
 const SIDE_TRANSLATE = 8;
 
 type PolicyTier = "BASIC" | "STANDARD" | "PREMIUM";
@@ -67,10 +69,11 @@ const FALLBACK_PLANS: any[] = [
 ];
 
 export default function PolicyScreen() {
-  const { quotes, fetchQuote, isLoading, activatePolicy, activePolicy } = usePolicyStore();
+  const { quotes, fetchQuote, isLoading, activatePolicy, activePolicy } =
+    usePolicyStore();
   const [selectedTier, setSelectedTier] = useState<PolicyTier>("STANDARD");
   const [activating, setActivating] = useState(false);
-  
+
   useEffect(() => {
     fetchQuote();
   }, []);
@@ -133,15 +136,13 @@ export default function PolicyScreen() {
   const handleActivate = () => {
     const matchedPlan = currentPlans.find((p) => p.id === selectedTier);
     if (!matchedPlan) return;
-    
-    const draftId = (matchedPlan as any)?.policyId || `pol-draft-${selectedTier.toLowerCase()}-${Date.now()}`;
+
     const totalAmount = matchedPlan.price;
     const basePrice = (matchedPlan as any)?.base_price || totalAmount;
     const additionalPrice = (matchedPlan as any)?.additional_price || 0;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    navigation.navigate('BankSelection', {
-      policyId: draftId,
+    navigation.navigate("BankSelection", {
       tierName: selectedTier,
       totalAmount,
       basePrice,
@@ -168,79 +169,111 @@ export default function PolicyScreen() {
         {activePolicy ? (
           <View style={styles.activeCard}>
             <View style={styles.activeHeaderRow}>
-               <ShieldCheck size={s(28)} color={theme.colors.success} />
-               <Text style={styles.activeTitle}>Active Protection</Text>
+              <ShieldCheck size={s(28)} color={theme.colors.success} />
+              <Text style={styles.activeTitle}>Active Protection</Text>
             </View>
             <View style={styles.activeDetailRow}>
-               <Text style={styles.activeDetailLabel}>Premium paid:</Text>
-               <Text style={styles.activeDetailValue}>₹{activePolicy.premiumAmount}/wk</Text>
+              <Text style={styles.activeDetailLabel}>Premium paid:</Text>
+              <Text style={styles.activeDetailValue}>
+                ₹{activePolicy.premiumAmount}/wk
+              </Text>
             </View>
             <View style={styles.activeDetailRow}>
-               <Text style={styles.activeDetailLabel}>Coverage Limit:</Text>
-               <Text style={styles.activeDetailValue}>{Math.round(activePolicy.coverageMultiplier * 100)}% of loss</Text>
+              <Text style={styles.activeDetailLabel}>Coverage Limit:</Text>
+              <Text style={styles.activeDetailValue}>
+                {Math.round(activePolicy.coverageMultiplier * 100)}% of loss
+              </Text>
             </View>
             <View style={styles.activeDetailRow}>
-               <Text style={styles.activeDetailLabel}>Status:</Text>
-               <Text style={[styles.activeDetailValue, {color: theme.colors.success}]}>Protected</Text>
+              <Text style={styles.activeDetailLabel}>Status:</Text>
+              <Text
+                style={[
+                  styles.activeDetailValue,
+                  { color: theme.colors.success },
+                ]}
+              >
+                Protected
+              </Text>
             </View>
           </View>
         ) : (
           <>
             <View style={styles.carouselSection}>
               <Text style={styles.sectionHeader}>SELECT YOUR PLAN</Text>
-              
+
               {isLoading && currentPlans === FALLBACK_PLANS ? (
-                  <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: vs(40) }} />
+                <ActivityIndicator
+                  size="small"
+                  color={theme.colors.primary}
+                  style={{ marginVertical: vs(40) }}
+                />
               ) : (
-                  <View style={styles.carouselWrapper}>
-                    <Animated.FlatList
-                      ref={flatListRef}
-                      data={currentPlans}
-                      keyExtractor={(item) => item.id}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.carouselContainer}
-                      snapToInterval={SNAP_INTERVAL}
-                      snapToAlignment="center"
-                      decelerationRate="fast"
-                      bounces={false}
-                      disableIntervalMomentum={true}
-                      onScroll={onScroll}
-                      onMomentumScrollEnd={handleMomentumScrollEnd}
-                      scrollEventThrottle={16}
-                      getItemLayout={(_, index) => ({
-                        length: SNAP_INTERVAL,
-                        offset: SNAP_INTERVAL * index,
-                        index,
-                      })}
-                      renderItem={({ item, index }) => (
-                        <TierCarouselCard
-                          item={item}
-                          index={index}
-                          scrollX={scrollX}
-                          selected={selectedTier === item.id}
-                        />
-                      )}
-                    />
-                  </View>
+                <View style={styles.carouselWrapper}>
+                  <Animated.FlatList
+                    ref={flatListRef}
+                    data={currentPlans}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.carouselContainer}
+                    snapToOffsets={currentPlans.map(
+                      (_, i) => i * SNAP_INTERVAL,
+                    )}
+                    decelerationRate="fast"
+                    bounces={false}
+                    onScroll={onScroll}
+                    onMomentumScrollEnd={handleMomentumScrollEnd}
+                    scrollEventThrottle={16}
+                    getItemLayout={(_, index) => ({
+                      length: SNAP_INTERVAL,
+                      offset: SNAP_INTERVAL * index,
+                      index,
+                    })}
+                    renderItem={({ item, index }) => (
+                      <TierCarouselCard
+                        item={item}
+                        index={index}
+                        scrollX={scrollX}
+                        selected={selectedTier === item.id}
+                      />
+                    )}
+                  />
+                </View>
               )}
+              {/* Swipe Hint */}
+              <View style={styles.swipeHintRow}>
+                <ChevronLeft size={s(14)} color={theme.colors.outline} />
+                <Text style={styles.swipeHintText}>
+                  Swipe to explore tier options
+                </Text>
+                <ChevronRight size={s(14)} color={theme.colors.outline} />
+              </View>
             </View>
 
             {/* Unified ML Reason Box */}
             {(() => {
-              const selectedPlan = currentPlans.find((p: any) => p.id === selectedTier);
-              if (selectedPlan && selectedPlan.additional_price && Number(selectedPlan.additional_price) > 0) {
+              const selectedPlan = currentPlans.find(
+                (p: any) => p.id === selectedTier,
+              );
+              if (
+                selectedPlan &&
+                selectedPlan.additional_price &&
+                Number(selectedPlan.additional_price) > 0
+              ) {
                 return (
                   <View style={styles.unifiedAdditionalBox}>
-                     <View style={styles.aiReasonBox}>
-                        <Zap size={20} color="#F59E0B" />
-                        <View style={styles.aiReasonTextContainer}>
-                           <Text style={styles.aiAdditionalAmountText}>
-                              +₹{selectedPlan.additional_price} Disruption Fee applied this week
-                           </Text>
-                            <Text style={styles.aiReasonText}>{selectedPlan.reason}</Text>
-                        </View>
-                     </View>
+                    <View style={styles.aiReasonBox}>
+                      <Zap size={20} color="#F59E0B" />
+                      <View style={styles.aiReasonTextContainer}>
+                        <Text style={styles.aiAdditionalAmountText}>
+                          +₹{selectedPlan.additional_price} Disruption Fee
+                          applied this week
+                        </Text>
+                        <Text style={styles.aiReasonText}>
+                          {selectedPlan.reason}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 );
               }
@@ -276,18 +309,25 @@ export default function PolicyScreen() {
 
             {/* Total Amount Summary */}
             {(() => {
-              const selectedPlan = currentPlans.find((p: any) => p.id === selectedTier);
+              const selectedPlan = currentPlans.find(
+                (p: any) => p.id === selectedTier,
+              );
               if (selectedPlan) {
                 return (
                   <View style={styles.totalSummaryBox}>
                     <View style={styles.totalSummaryRow}>
-                      <Text style={styles.totalSummaryLabel}>Total Weekly Premium</Text>
-                      <Text style={styles.totalSummaryAmount}>₹{selectedPlan.price}/wk</Text>
+                      <Text style={styles.totalSummaryLabel}>
+                        Total Weekly Premium
+                      </Text>
+                      <Text style={styles.totalSummaryAmount}>
+                        ₹{selectedPlan.price}/wk
+                      </Text>
                     </View>
                     {(selectedPlan as any)?.base_price && (
-                       <Text style={styles.totalSummaryBreakdown}>
-                          Base: ₹{(selectedPlan as any).base_price} + Disruption: ₹{(selectedPlan as any).additional_price || 0}
-                       </Text>
+                      <Text style={styles.totalSummaryBreakdown}>
+                        Base: ₹{(selectedPlan as any).base_price} + Disruption:
+                        ₹{(selectedPlan as any).additional_price || 0}
+                      </Text>
                     )}
                   </View>
                 );
@@ -468,7 +508,7 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     width: CARD_WIDTH,
-    marginHorizontal: -CARD_OVERLAP / 2,
+    marginHorizontal: CARD_GAP / 2,
   },
   tierCardInner: {
     backgroundColor: theme.colors.surface,
@@ -550,11 +590,26 @@ const styles = StyleSheet.create({
     fontSize: ms(12),
     color: theme.colors.onSurfaceVariant,
   },
-  aiReasonBox: { flexDirection: 'row', backgroundColor: '#FFFBEB', padding: s(12), borderRadius: s(8), alignItems: 'center', gap: s(12) },
+  aiReasonBox: {
+    flexDirection: "row",
+    backgroundColor: "#FFFBEB",
+    padding: s(12),
+    borderRadius: s(8),
+    alignItems: "center",
+    gap: s(12),
+  },
   unifiedAdditionalBox: { paddingHorizontal: s(24), marginBottom: vs(24) },
   aiReasonTextContainer: { flex: 1, gap: vs(2) },
-  aiAdditionalAmountText: { fontFamily: 'Inter_700Bold', fontSize: ms(13), color: '#B45309' },
-  aiReasonText: { fontFamily: 'Inter_500Medium', fontSize: ms(12), color: '#92400E' },
+  aiAdditionalAmountText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: ms(13),
+    color: "#B45309",
+  },
+  aiReasonText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: ms(12),
+    color: "#92400E",
+  },
   featuresList: {
     gap: vs(8),
     borderTopWidth: 1,
@@ -620,15 +675,81 @@ const styles = StyleSheet.create({
     fontSize: ms(16),
     color: "#FFFFFF",
   },
-  activeCard: { backgroundColor: theme.colors.surface, marginHorizontal: s(24), padding: s(24), borderRadius: s(24), borderWidth: 2, borderColor: theme.colors.success + '40' },
-  activeHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: vs(24), gap: s(12) },
-  activeTitle: { fontFamily: 'Manrope_800ExtraBold', fontSize: ms(22), color: theme.colors.success },
-  activeDetailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: vs(12) },
-  activeDetailLabel: { fontFamily: 'Inter_500Medium', fontSize: ms(15), color: theme.colors.onSurfaceVariant },
-  activeDetailValue: { fontFamily: 'Manrope_700Bold', fontSize: ms(16), color: theme.colors.onSurface },
-  totalSummaryBox: { marginHorizontal: s(24), marginBottom: vs(16), backgroundColor: theme.colors.surface, borderRadius: s(16), padding: s(16), borderWidth: 1, borderColor: theme.colors.primary + '30' },
-  totalSummaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalSummaryLabel: { fontFamily: 'Inter_600SemiBold', fontSize: ms(14), color: theme.colors.onSurfaceVariant },
-  totalSummaryAmount: { fontFamily: 'Manrope_800ExtraBold', fontSize: ms(20), color: theme.colors.primary },
-  totalSummaryBreakdown: { fontFamily: 'Inter_500Medium', fontSize: ms(12), color: theme.colors.outline, marginTop: vs(4) },
+  swipeHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: s(8),
+    marginBottom: vs(24),
+    opacity: 0.6,
+  },
+  swipeHintText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: ms(12),
+    color: theme.colors.outline,
+  },
+  activeCard: {
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: s(24),
+    padding: s(24),
+    borderRadius: s(24),
+    borderWidth: 2,
+    borderColor: theme.colors.success + "40",
+  },
+  activeHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: vs(24),
+    gap: s(12),
+  },
+  activeTitle: {
+    fontFamily: "Manrope_800ExtraBold",
+    fontSize: ms(22),
+    color: theme.colors.success,
+  },
+  activeDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: vs(12),
+  },
+  activeDetailLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: ms(15),
+    color: theme.colors.onSurfaceVariant,
+  },
+  activeDetailValue: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: ms(16),
+    color: theme.colors.onSurface,
+  },
+  totalSummaryBox: {
+    marginHorizontal: s(24),
+    marginBottom: vs(16),
+    backgroundColor: theme.colors.surface,
+    borderRadius: s(16),
+    padding: s(16),
+    borderWidth: 1,
+    borderColor: theme.colors.primary + "30",
+  },
+  totalSummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  totalSummaryLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: ms(14),
+    color: theme.colors.onSurfaceVariant,
+  },
+  totalSummaryAmount: {
+    fontFamily: "Manrope_800ExtraBold",
+    fontSize: ms(20),
+    color: theme.colors.primary,
+  },
+  totalSummaryBreakdown: {
+    fontFamily: "Inter_500Medium",
+    fontSize: ms(12),
+    color: theme.colors.outline,
+    marginTop: vs(4),
+  },
 });

@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { connection } from '../queue/redis';
+import { redisConfig } from '../queue/redis';
 import { OUTBOX_QUEUE_NAME } from '../queue/outboxQueue';
 import { pool } from '../db';
 
@@ -48,4 +48,4 @@ export const outboxWorker = new Worker(OUTBOX_QUEUE_NAME, async (job: Job) => {
     } finally {
         client.release();
     }
-}, { connection });
+}, { connection: redisConfig });

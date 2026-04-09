@@ -1,9 +1,9 @@
 import { Queue } from 'bullmq';
-import { connection } from './redis';
+import { redisConfig } from './redis';
 
 export const PRICING_QUEUE_NAME = 'ml-pricing-sync';
 
-export const pricingQueue = new Queue(PRICING_QUEUE_NAME, { connection });
+export const pricingQueue = new Queue(PRICING_QUEUE_NAME, { connection: redisConfig });
 
 export const scheduleMLPricingJobs = async () => {
     const jobs = await pricingQueue.getRepeatableJobs();

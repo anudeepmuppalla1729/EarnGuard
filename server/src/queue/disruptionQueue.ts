@@ -1,10 +1,10 @@
 import { Queue } from 'bullmq';
-import { connection } from './redis';
+import { redisConfig } from './redis';
 
 export const DISRUPTION_QUEUE_NAME = 'disruption-detection';
 
 // The Queue instance where we add jobs
-export const disruptionQueue = new Queue(DISRUPTION_QUEUE_NAME, { connection });
+export const disruptionQueue = new Queue(DISRUPTION_QUEUE_NAME, { connection: redisConfig });
 
 // Helper to start the cron
 export const scheduleDisruptionDetection = async () => {
@@ -14,15 +14,15 @@ export const scheduleDisruptionDetection = async () => {
         await disruptionQueue.removeRepeatableByKey(job.key);
     }
     
-    // Add job running every 15 minutes
+    // Add job running every 1 hour
     await disruptionQueue.add(
         'interval-detection',
         { trigger: 'cron' },
         {
             repeat: {
-                pattern: '*/15 * * * *', // every 15 mins
+                pattern: '*/3 * * * *', // every 3 minutes
             }
         }
     );
-    console.log('BullMQ: Scheduled Disruption Detection cron (every 15 mins)');
+    console.log('BullMQ: Scheduled Disruption Detection cron (every 3 minutes)');
 };

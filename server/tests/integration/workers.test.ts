@@ -2,53 +2,63 @@ import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { pool } from '../../src/db';
 import { v4 as uuidv4 } from 'uuid';
 
-// Mock Network fetch statically bypassing python ML services natively
-global.fetch = jest.fn() as any;
+describe('Integration Tests: Decoupled Disruption Architecture', () => {
 
-describe('Integration Tests: Background ML Workers', () => {
-    
-    beforeEach(() => {
-        (global.fetch as jest.Mock).mockClear();
+    it('Disruption Workflow correctly models 3-minute granular risk snapshots natively', async () => {
+        // Create mock zone
+        const zoneId = 'Z_TEST_DISRUPT_' + Date.now();
+        await pool.query("INSERT INTO cities (id, name) VALUES ('C_TEST_1', 'Test') ON CONFLICT DO NOTHING");
+        await pool.query("INSERT INTO zones (id, city_id, name) VALUES ($1, 'C_TEST_1', 'Test Zone')", [zoneId]);
+
+        // Output snapshot exactly as the actual new disruption worker would
+        const riskScore = 0.85;
+        const drops = 60;
+        await pool.query(`
+            INSERT INTO zone_risk_snapshots (id, zone_id, risk_score, order_drop_percentage)
+            VALUES ($1, $2, $3, $4)
+        `, [uuidv4(), zoneId, riskScore, drops]);
+
+        const check = await pool.query('SELECT * FROM zone_risk_snapshots WHERE zone_id = $1', [zoneId]);
+        expect(check.rows.length).toBe(1);
+        expect(parseFloat(check.rows[0].risk_score)).toBe(0.85);
     });
 
-    it('Simulated: mlPricingWorker Monthly routines isolate dynamically', async () => {
-        // Assume BullMQ executes the target job block dynamically.
-        // We mock the FAST API response explicitly targeting `predict/monthly`
-        (global.fetch as jest.Mock<any>).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ predicted_monthly_average_price: 185.50 })
-        });
-        
-        /* 
-         Inside the Worker codebase logic natively:
-         It would ping localhost:8000 natively.
-         We simulate the exact consequence against Postgres directly here 
-         rather than exporting anonymous block abstractions heavily.
-        */
-       
-       await pool.query(`
-            UPDATE city_pricing SET base_price = $1, last_monthly_sync = NOW() WHERE city_id = 'C1'
-       `, [185.50]);
+    it('Payout Workflow safely aggregates hourly analytics, stores payouts, and purges older localized snapshots securely', async () => {
+        const zoneId = 'Z_TEST_PAYOUT_' + Date.now();
+        await pool.query("INSERT INTO cities (id, name) VALUES ('C_TEST_1', 'Test') ON CONFLICT DO NOTHING");
+        await pool.query("INSERT INTO zones (id, city_id, name) VALUES ($1, 'C_TEST_1', 'Test Zone')", [zoneId]);
 
-       const check = await pool.query('SELECT base_price FROM city_pricing WHERE city_id = $1', ['C1']);
-       expect(parseFloat(check.rows[0].base_price)).toBe(185.50);
-       
-       // Verify standard mock network traffic
-       // expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:8000/api/v1/predict/monthly', expect.any(Object));
-    });
+        // Insert 3 snapshots simulating a rolling hour of volatile detection metrics
+        await pool.query(`INSERT INTO zone_risk_snapshots (id, zone_id, risk_score, order_drop_percentage, created_at) VALUES ($1, $2, 0.40, 20, NOW())`, [uuidv4(), zoneId]);
+        await pool.query(`INSERT INTO zone_risk_snapshots (id, zone_id, risk_score, order_drop_percentage, created_at) VALUES ($1, $2, 0.60, 40, NOW())`, [uuidv4(), zoneId]);
+        await pool.query(`INSERT INTO zone_risk_snapshots (id, zone_id, risk_score, order_drop_percentage, created_at) VALUES ($1, $2, 0.80, 60, NOW())`, [uuidv4(), zoneId]);
 
-    it('Simulated: disruptionWorker actively filters through Mock Server online arrays natively', async () => {
-        /*
-          The disruption Worker logic explicitly shoots POST requests outwards looking for arrays.
-          We intercept that network outbound to evaluate its intersection natively.
-        */
-        (global.fetch as jest.Mock<any>).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ onlineWorkerIds: ["uuid-1"] }) // mock returning strictly partial array
-        });
+        // Simulate exact native payout worker calculation
+        const aggregatedRes = await pool.query(`
+            SELECT zone_id, 
+                   AVG(risk_score) as avg_risk, 
+                   MAX(order_drop_percentage) as max_drops
+            FROM zone_risk_snapshots
+            WHERE zone_id = $1
+            GROUP BY zone_id
+        `, [zoneId]);
 
-        // We assume Payout math executes safely here natively.
-        // If worker map isn't checked, the loop skips securely.
-        expect(true).toBe(true);
+        expect(aggregatedRes.rows.length).toBe(1);
+        expect(parseFloat(aggregatedRes.rows[0].avg_risk)).toBeCloseTo(0.60);
+        expect(parseFloat(aggregatedRes.rows[0].max_drops)).toBe(60);
+
+        // Simulate architecture committing to immutable analytic table natively
+        await pool.query(`
+            INSERT INTO hourly_risk_analytics (id, zone_id, avg_risk_score, max_order_drop_percentage, hour_timestamp)
+            VALUES ($1, $2, $3, $4, NOW())
+        `, [uuidv4(), zoneId, aggregatedRes.rows[0].avg_risk, aggregatedRes.rows[0].max_drops]);
+
+        const analytics = await pool.query('SELECT * FROM hourly_risk_analytics WHERE zone_id = $1', [zoneId]);
+        expect(analytics.rows.length).toBe(1);
+
+        // Simulate the clean hourly purge protecting the RDS metrics natively
+        await pool.query(`DELETE FROM zone_risk_snapshots WHERE zone_id = $1`, [zoneId]);
+        const snapCheck = await pool.query('SELECT * FROM zone_risk_snapshots WHERE zone_id = $1', [zoneId]);
+        expect(snapCheck.rows.length).toBe(0);
     });
 });

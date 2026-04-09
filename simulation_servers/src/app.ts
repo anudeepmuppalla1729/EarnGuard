@@ -56,6 +56,26 @@ app.get('/platform/workers/:id', async (req, res) => {
   }
 });
 
+// GET /platform/workers/:id/income-stats?hour=15
+app.get('/platform/workers/:id/income-stats', async (req, res) => {
+  const id = req.params.id;
+  const hourStr = req.query.hour as string;
+  const hour = hourStr ? parseInt(hourStr, 10) : new Date().getHours();
+  
+  try {
+    // Generate a simulated but deterministic income rate per hour based on worker ID and hour
+    const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    // Base income ranges from 80 to 200 depending on worker and time of day
+    const timeMultiplier = (hour >= 18 && hour <= 21) ? 1.5 : ((hour >= 12 && hour <= 14) ? 1.2 : 1.0);
+    const workerBase = 80 + (hash % 120);
+    const hourlyIncome = Math.round(workerBase * timeMultiplier);
+
+    res.json({ platformWorkerId: id, hour, hourlyAverageIncome: hourlyIncome });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /platform/workers/lookup  — auto-assign worker ID by email + mobile
 // This simulates the platform API resolving a gig-worker identity
 app.post('/platform/workers/lookup', async (req, res) => {
