@@ -3,7 +3,10 @@ import { redisConfig } from '../queue/redis';
 import { PRICING_QUEUE_NAME } from '../queue/pricingQueue';
 import { pool } from '../db';
 
-const ML_SERVER_URL = 'http://127.0.0.1:8000';
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const ML_SERVER_URL = process.env.ML_URL || 'http://localhost:8000';
 
 export const mlPricingWorker = new Worker(PRICING_QUEUE_NAME, async (job: Job) => {
     const { type } = job.data;
@@ -66,7 +69,7 @@ export const mlPricingWorker = new Worker(PRICING_QUEUE_NAME, async (job: Job) =
                 }
             } 
             else if (type === 'WEEKLY') {
-                const MOCK_URL = process.env.MOCK_SERVER_URL || 'http://127.0.0.1:4000';
+                const MOCK_URL = process.env.SIM_URL || 'http://localhost:4000';
                 
                 // Fetch Live Context from Simulator
                 const weatherRes = await fetch(`${MOCK_URL}/weather?city=${city.city_id}`);

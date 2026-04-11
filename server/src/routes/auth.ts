@@ -124,7 +124,7 @@ router.post('/register', validate(RegisterSchema), async (req: Request, res: Res
     let gigWorker: { platformWorkerId: string; name: string; platform: string; cityId: string; zoneId: string };
 
     try {
-      const MOCK_API = process.env.MOCK_API_URL || 'http://localhost:4000';
+      const MOCK_API = process.env.SIM_URL || 'http://localhost:4000';
       const lookupRes = await fetch(`${MOCK_API}/platform/workers/lookup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

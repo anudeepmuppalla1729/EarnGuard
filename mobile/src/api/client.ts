@@ -17,7 +17,7 @@ import Constants from 'expo-constants';
 const debuggerHost = Constants.expoConfig?.hostUri;
 const localIp = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
 console.log(localIp)
-const BASE_URL = `http://${localIp}:3000/api/v1`;
+const BASE_URL = process.env.EXPO_PUBLIC_SERVER_URL || `http://${localIp}:3000/api/v1`;
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const http: AxiosInstance = axios.create({
