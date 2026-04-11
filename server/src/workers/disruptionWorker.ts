@@ -5,7 +5,10 @@ import { pool } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 import { computeNewsRiskProlog } from './rules';
 
-const MOCK_API_PORT = 4000;
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const SIM_URL = process.env.SIM_URL || 'http://localhost:4000';
 const RISK_THRESHOLD = 0.65; // Threshold to trigger claim payouts
 
 /** Weather logic computation */
@@ -61,14 +64,14 @@ export const disruptionWorker = new Worker(DISRUPTION_QUEUE_NAME, async (job: Jo
 
         // 🔹 For CITY (Shared across zones)
         for (const cityId of cities) {
-            const newsRes = await fetch(`http://localhost:${MOCK_API_PORT}/news?cityId=${cityId}`);
+            const newsRes = await fetch(`${SIM_URL}/news?cityId=${cityId}`);
             const newsData = newsRes.ok ? await newsRes.json() : {};
             const headline = newsData?.headline || "";
             // Use Prolog integration constraint (fallback to old logic bound if Prolog yields nothing)
             const prologRisk = await computeNewsRiskProlog(headline);
             cityNewsCache[cityId] = Math.max(prologRisk, (newsData?.confidence || 0.0) * 0.5);
 
-            const weatherRes = await fetch(`http://localhost:${MOCK_API_PORT}/weather?cityId=${cityId}`);
+            const weatherRes = await fetch(`${SIM_URL}/weather?cityId=${cityId}`);
             const weatherData = weatherRes.ok ? await weatherRes.json() : {};
             cityWeatherCache[cityId] = computeWeatherRisk(weatherData);
         }
@@ -85,7 +88,7 @@ export const disruptionWorker = new Worker(DISRUPTION_QUEUE_NAME, async (job: Jo
             const cityId = zoneWorkers[0].city_id;
             
             const workerIdsInZone = zoneWorkers.map(w => w.platform_worker_id);
-            const onlineRes = await fetch(`http://localhost:${MOCK_API_PORT}/platform/active-workers?zoneId=${zoneId}`, {
+            const onlineRes = await fetch(`${SIM_URL}/platform/active-workers?zoneId=${zoneId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ workerIds: workerIdsInZone })
@@ -93,11 +96,11 @@ export const disruptionWorker = new Worker(DISRUPTION_QUEUE_NAME, async (job: Jo
             const onlineData = onlineRes.ok ? await onlineRes.json() : { onlineWorkerIds: [] };
             onlineData.onlineWorkerIds.forEach((id: string) => { onlineWorkersMap[id] = true; });
             
-            const trafficRes = await fetch(`http://localhost:${MOCK_API_PORT}/traffic?zoneId=${zoneId}`);
+            const trafficRes = await fetch(`${SIM_URL}/traffic?zoneId=${zoneId}`);
             const trafficData = trafficRes.ok ? await trafficRes.json() : {};
             const trafficRisk = trafficData.trafficRiskScore || 0.0;
 
-            const platRes = await fetch(`http://localhost:${MOCK_API_PORT}/platform?zoneId=${zoneId}`);
+            const platRes = await fetch(`${SIM_URL}/platform?zoneId=${zoneId}`);
             const platData = platRes.ok ? await platRes.json() : {};
             const platformRisk = computePlatformRisk(platData);
             zoneOrderDrops[zoneId] = platData?.orderDropPercentage || 0;

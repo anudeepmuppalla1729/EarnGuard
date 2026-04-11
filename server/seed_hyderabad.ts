@@ -3,7 +3,10 @@ import path from 'path';
 import { pool } from './src/db';
 import { v4 as uuidv4 } from 'uuid';
 
-const ML_SERVER_URL = 'http://127.0.0.1:8000';
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const ML_SERVER_URL = process.env.ML_URL || 'http://127.0.0.1:8000';
 
 async function seedHyderabad() {
     try {

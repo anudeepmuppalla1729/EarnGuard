@@ -1,5 +1,9 @@
 import { pool } from '../src/db/index';
 import axios from 'axios';
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const ML_SERVER_URL = process.env.ML_URL || 'http://localhost:8000';
 
 async function populateMlDb() {
   try {
@@ -71,7 +75,7 @@ async function populateMlDb() {
       ]
     };
 
-    const monthlyResponse = await axios.post('http://localhost:8000/api/v1/predict/monthly', monthlyPayload);
+    const monthlyResponse = await axios.post(`${ML_SERVER_URL}/api/v1/predict/monthly`, monthlyPayload);
     const basePrice = monthlyResponse.data.predicted_monthly_average_price;
     console.log(`EarnGuard ML predicted Base Price: ₹${basePrice}`);
 
@@ -94,7 +98,7 @@ async function populateMlDb() {
       }
     };
     
-    const weeklyResponse = await axios.post('http://localhost:8000/calculate-weekly-price', weeklyPayload);
+    const weeklyResponse = await axios.post(`${ML_SERVER_URL}/calculate-weekly-price`, weeklyPayload);
     const additionalPrice = weeklyResponse.data.weekly_addition;
     const reason = weeklyResponse.data.reason;
     console.log(`EarnGuard ML predicted Additional Price: ₹${additionalPrice}`);

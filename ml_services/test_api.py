@@ -66,7 +66,10 @@ payload = {
   ]
 }
 
+import os
+
+url = os.environ.get("ML_URL", "http://localhost:8000")
 print("Sending POST request to FastAPI server...")
-response = requests.post("http://localhost:8000/api/v1/predict/monthly", json=payload)
+response = requests.post(f"{url}/api/v1/predict/monthly", json=payload)
 print(f"Status Code: {response.status_code}")
 print(f"Response: {json.dumps(response.json(), indent=2)}")

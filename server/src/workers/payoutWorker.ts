@@ -4,7 +4,10 @@ import { PAYOUT_QUEUE_NAME } from '../queue/payoutQueue';
 import { pool } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
-const MOCK_API_PORT = 4000;
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const SIM_URL = process.env.SIM_URL || 'http://localhost:4000';
 const RISK_THRESHOLD = 0.65;
 
 export const payoutWorker = new Worker(PAYOUT_QUEUE_NAME, async (job: Job) => {
@@ -75,7 +78,7 @@ export const payoutWorker = new Worker(PAYOUT_QUEUE_NAME, async (job: Job) => {
             if (zoneWorkers.length === 0) continue;
             
             const workerIdsInZone = zoneWorkers.map(w => w.platform_worker_id);
-            const onlineRes = await fetch(`http://localhost:${MOCK_API_PORT}/platform/active-workers?zoneId=${zoneId}`, {
+            const onlineRes = await fetch(`${SIM_URL}/platform/active-workers?zoneId=${zoneId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ workerIds: workerIdsInZone })
@@ -119,7 +122,7 @@ export const payoutWorker = new Worker(PAYOUT_QUEUE_NAME, async (job: Job) => {
             const durationHours = 1.0; 
             
             // Dynamically fetch worker's unique historical income for this hour
-            const statRes = await fetch(`http://localhost:${MOCK_API_PORT}/platform/workers/${worker.platform_worker_id}/income-stats?hour=${currentHour}`);
+            const statRes = await fetch(`${SIM_URL}/platform/workers/${worker.platform_worker_id}/income-stats?hour=${currentHour}`);
             let incomeRate = 120; // Default fallback
             if (statRes.ok) {
                 const stats = await statRes.json();

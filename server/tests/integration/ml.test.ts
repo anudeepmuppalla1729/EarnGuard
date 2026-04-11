@@ -1,4 +1,8 @@
 import { describe, it, expect, jest } from '@jest/globals';
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const ML_SERVER_URL = process.env.ML_URL || 'http://127.0.0.1:8000';
 
 // We explicitly DO NOT mock global.fetch here so we can hit the running Python AI natively!
 describe('Live ML Pipeline Scenario Stress Tests', () => {
@@ -7,7 +11,7 @@ describe('Live ML Pipeline Scenario Stress Tests', () => {
     jest.setTimeout(30000); 
 
     it('Scenario 1: Cyclone & Severe Weather natively induces extreme weekly premium adjustments', async () => {
-        const weekRes = await fetch(`http://127.0.0.1:8000/calculate-weekly-price`, {
+        const weekRes = await fetch(`${ML_SERVER_URL}/calculate-weekly-price`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -36,7 +40,7 @@ describe('Live ML Pipeline Scenario Stress Tests', () => {
     });
 
     it('Scenario 2: Transport Strikes & City Curfews natively map massive external disruption risk smoothly', async () => {
-        const weekRes = await fetch(`http://127.0.0.1:8000/calculate-weekly-price`, {
+        const weekRes = await fetch(`${ML_SERVER_URL}/calculate-weekly-price`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
