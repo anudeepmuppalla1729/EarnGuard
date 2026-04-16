@@ -9,6 +9,7 @@ import policyRoutes        from './routes/policies';
 import walletRoutes        from './routes/wallet';
 import claimsRoutes        from './routes/claims';
 import notificationRoutes  from './routes/notifications';
+import dashboardRoutes     from './routes/dashboard';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/v1/policies',       policyRoutes);
 app.use('/api/v1/wallet',         walletRoutes);
 app.use('/api/v1/claims',         claimsRoutes);
 app.use('/api/v1/notifications',  notificationRoutes);
+app.use('/api/v1/dashboard',      dashboardRoutes);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get('/api/v1/health', (req, res) => {

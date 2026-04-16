@@ -94,8 +94,19 @@ CREATE TABLE IF NOT EXISTS claims (
     severity_multiplier NUMERIC(4,2),
     disruption_type TEXT,
     status TEXT CHECK (status IN ('APPROVED','REJECTED','PENDING')),
+    claim_type TEXT DEFAULT 'SYSTEM' CHECK (claim_type IN ('SYSTEM','MANUAL')),
+    claim_timeframe_start TIMESTAMP,
+    claim_timeframe_end TIMESTAMP,
+    claim_note TEXT,
+    rejection_reason TEXT,
+    client_request_id TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Idempotency index for manual claims
+CREATE UNIQUE INDEX IF NOT EXISTS idx_claims_worker_client_request 
+  ON claims (worker_id, client_request_id) 
+  WHERE client_request_id IS NOT NULL;
 
 -- 2.7 ML Inference Logs
 CREATE TABLE IF NOT EXISTS ml_inference_logs (
