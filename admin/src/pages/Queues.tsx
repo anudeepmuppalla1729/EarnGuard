@@ -36,6 +36,37 @@ export function Queues() {
                 <p className="text-xl font-mono mt-1" style={{ color: 'var(--color-tertiary)' }}>{q.failed}</p>
               </div>
             </div>
+            
+            <div className="mt-5 pt-4 border-t" style={{ borderColor: 'var(--color-surface-high)' }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-outline)' }}>Attached Workers ({q.workers?.length || 0})</p>
+              {q.workers && q.workers.length > 0 ? (
+                <div className="max-h-32 overflow-y-auto pr-1 flex flex-col gap-2">
+                  {q.workers.map((w: any, idx: number) => {
+                    const isIdle = parseInt(w.idle || '0') > 5;
+                    return (
+                      <div key={idx} className="p-2 rounded-md border" style={{ background: 'var(--color-surface-highest)', borderColor: 'var(--color-surface-high)' }}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--color-on-surface)' }}>Client ID: {w.id}</span>
+                          <span className="text-[9px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded" style={{ 
+                            background: isIdle ? '#f1f5f9' : 'var(--color-primary-fixed)',
+                            color: isIdle ? '#64748b' : 'var(--color-primary)'
+                          }}>
+                            {isIdle ? 'POLLING' : 'PROCESSING'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-[9px] font-mono" style={{ color: 'var(--color-on-surface-variant)' }}>CMD: {w.cmd?.toUpperCase()}</p>
+                          <p className="text-[9px] font-mono" style={{ color: 'var(--color-on-surface-variant)' }}>Idle: {w.idle}s</p>
+                          <p className="text-[9px] font-mono" style={{ color: 'var(--color-outline)' }}>{w.addr}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs italic py-2 text-center" style={{ color: 'var(--color-outline)' }}>No live workers connected.</p>
+              )}
+            </div>
           </div>
         ))}
         {(!queues || queues.length === 0) && (
