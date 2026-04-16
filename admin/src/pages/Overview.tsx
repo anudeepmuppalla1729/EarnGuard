@@ -1,9 +1,9 @@
-import { usePolledData, FAST_POLL } from '../hooks/useAdminData';
+import { usePolledData } from '../hooks/useAdminData';
 import { 
   Users, CheckCircle, FileText, IndianRupee, TrendingUp, TrendingDown,
-  Download, Sliders, AlertCircle, Shield, Zap, Activity, Info, Radio
+  Download, Sliders, AlertCircle, Shield, Zap, Info, Radio
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, AreaChart, Area } from 'recharts';
+import { XAxis, ResponsiveContainer, Tooltip, AreaChart, Area } from 'recharts';
 import { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
 
@@ -16,11 +16,11 @@ export function Overview() {
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
 
   // Split Polling
-  const { data: m, timestamp: metricsTime } = usePolledData<any>('/metrics', SLOW_POLL);
-  const { data: health, timestamp: healthTime } = usePolledData<any>('/health', RAPID_POLL);
+  const { data: m } = usePolledData<any>('/metrics', SLOW_POLL);
+  const { data: health } = usePolledData<any>('/health', RAPID_POLL);
   const { data: disruptions, timestamp: disruptionsTime } = usePolledData<any[]>('/disruptions', RAPID_POLL);
   const { data: pipeline, timestamp: pipelineTime } = usePolledData<any>('/pipeline', SLOW_POLL);
-  const { data: signals, timestamp: signalsTime } = usePolledData<any>('/signals', RAPID_POLL);
+  const { data: signals } = usePolledData<any>('/signals', RAPID_POLL);
 
   useEffect(() => {
     if (isConfigOpen) {
