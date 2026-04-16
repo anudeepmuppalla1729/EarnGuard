@@ -13,10 +13,14 @@ router.use(adminAuth);
 // System
 router.get('/health',          c.getHealth);
 router.get('/metrics',         c.getMetrics);
+router.get('/pipeline',        c.getClaimPipelineStats);
+router.get('/config',          c.getSystemConfig);
+router.post('/config',         c.updateSystemConfig);
+router.get('/report/download', c.downloadReport);
 
 // Risk
 router.get('/risk/overview',   c.getRiskOverview);
-router.get('/events',          c.getActiveEvents);
+router.get('/disruptions',     c.getActiveDisruptions);
 
 // Claims
 router.get('/claims/summary',  c.getClaimsSummary);

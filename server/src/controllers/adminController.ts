@@ -24,7 +24,8 @@ export const login = (req: Request, res: Response) => {
 export const getHealth = handler(async () => adminService.getHealth());
 export const getMetrics = handler(async () => adminService.getMetrics());
 export const getRiskOverview = handler(async () => adminService.getRiskOverview());
-export const getActiveEvents = handler(async () => adminService.getActiveEvents());
+export const getActiveDisruptions = handler(async () => adminService.getActiveDisruptions());
+export const getClaimPipelineStats = handler(async () => adminService.getClaimPipelineStats());
 export const getClaimsSummary = handler(async () => adminService.getClaimsSummary());
 export const getClaimsDetail = handler(async (req) => {
     const page = parseInt(req.query.page as string) || 1;
@@ -36,12 +37,25 @@ export const getClaimsDetail = handler(async (req) => {
         page, limit,
     });
 });
-export const getFraudInsights = handler(async () => adminService.getFraudInsights());
+export const getFraudInsights = handler(async () => adminService.getFraudMetrics());
 export const getPayoutStats = handler(async () => adminService.getPayoutStats());
 export const getQueueStats = handler(async () => adminService.getQueueStats());
 export const getMlMetrics = handler(async () => adminService.getMlMetrics());
 export const getPricing = handler(async () => adminService.getPricing());
 export const getSignals = handler(async (req) => adminService.getSignals(req.query.zoneId as string || 'Z1'));
+
+export const getSystemConfig = handler(async () => adminService.getSystemConfig());
+export const updateSystemConfig = handler(async (req) => adminService.updateSystemConfig(req.body.key, req.body.value));
+export const downloadReport = async (req: Request, res: Response) => {
+    try {
+        const csv = await adminService.generateOperationalReport();
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=earnguard_operational_report.csv');
+        res.send(csv);
+    } catch (e) {
+        res.status(500).json({ error: 'Report generation failed' });
+    }
+};
 export const getUsers = handler(async (req) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
