@@ -4,6 +4,8 @@ import { payoutQueue } from '../queue/payoutQueue';
 import { outboxQueue } from '../queue/outboxQueue';
 import { pricingQueue } from '../queue/pricingQueue';
 import * as dotenv from 'dotenv';
+import Redis from 'ioredis';
+import { redisConfig } from '../queue/redis';
 dotenv.config();
 
 const SIM_URL = process.env.SIM_URL || 'http://localhost:4000';
@@ -23,34 +25,134 @@ export const getHealth = async () => {
 
     // DB connectivity check
     let dbStatus = 'UP';
-    try { await pool.query('SELECT 1'); } catch { dbStatus = 'DOWN'; }
+    let activeDbConnections = 0;
+    try { 
+        const conns = await pool.query("SELECT count(*) FROM pg_stat_activity");
+        activeDbConnections = parseInt(conns.rows[0].count);
+    } catch { dbStatus = 'DOWN'; }
 
-    const status = dbStatus === 'DOWN' ? 'DOWN' : mem.usedPercent > 90 ? 'DEGRADED' : 'UP';
+    // Redis connectivity check
+    let redisStatus = 'UP';
+    let redisMemory = '0B';
+    let redisClients = 0;
+    let redisVersion = 'Unknown';
+    try {
+        const redis = new Redis(redisConfig);
+        const info = await redis.info();
+        const memMatch = info.match(/used_memory_human:(\S+)/);
+        const clientMatch = info.match(/connected_clients:(\d+)/);
+        const versionMatch = info.match(/redis_version:(\S+)/);
+        const opsMatch = info.match(/instantaneous_ops_per_sec:(\d+)/);
+        
+        if (memMatch) redisMemory = memMatch[1];
+        if (clientMatch) redisClients = parseInt(clientMatch[1]);
+        if (versionMatch) redisVersion = versionMatch[1];
+        const redisOps = opsMatch ? parseInt(opsMatch[1]) : 0;
+        
+        await redis.quit();
 
-    return { uptime, memory: mem, cpuLoad, eventLoopLag, dbStatus, status, nodeVersion: process.version, pid: process.pid };
+        // Server pings
+        const checkServer = async (url: string) => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 1000);
+                await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                return 'UP';
+            } catch {
+                return 'DOWN';
+            }
+        };
+
+        const [simPing, mlPing] = await Promise.all([
+            checkServer(SIM_URL),
+            checkServer('http://localhost:8000')
+        ]);
+
+        const servers = [
+            { name: 'Operations Backend', port: 3000, status: 'UP', type: 'Primary' },
+            { name: 'Simulation Engine', port: 4000, status: simPing, type: 'Service' },
+            { name: 'ML Inference API', port: 8000, status: mlPing, type: 'AI' },
+            { name: 'Command Center UI', port: 5173, status: 'UP', type: 'Client' }
+        ];
+
+        return { 
+            uptime, 
+            memory: mem, 
+            cpuLoad, 
+            eventLoopLag, 
+            dbStatus, 
+            activeDbConnections,
+            redisStatus,
+            redisMemory,
+            redisClients,
+            redisVersion,
+            redisOps,
+            servers,
+            status: (dbStatus === 'DOWN' || redisStatus === 'DOWN' || simPing === 'DOWN' || mlPing === 'DOWN') ? 'DOWN' : mem.usedPercent > 90 ? 'DEGRADED' : 'UP',
+            nodeVersion: process.version, 
+            pid: process.pid 
+        };
+    } catch (err) {
+        return {
+            uptime,
+            memory: mem,
+            cpuLoad,
+            eventLoopLag,
+            dbStatus: 'DOWN',
+            activeDbConnections: 0,
+            redisStatus: 'DOWN',
+            redisMemory: '0B',
+            redisClients: 0,
+            redisVersion: 'Unknown',
+            redisOps: 0,
+            servers: [
+                { name: 'Operations Backend', port: 3000, status: 'UP', type: 'Primary' },
+                { name: 'Simulation Engine', port: 4000, status: 'DOWN', type: 'Service' },
+                { name: 'ML Inference API', port: 8000, status: 'DOWN', type: 'AI' },
+                { name: 'Command Center UI', port: 5173, status: 'UP', type: 'Client' }
+            ],
+            status: 'DOWN',
+            nodeVersion: process.version,
+            pid: process.pid
+        };
+    }
 };
 
 // ── OVERVIEW METRICS ─────────────────────────────────────────────────────────
 
 export const getMetrics = async () => {
-    const [workers, policies, claimsTotal, approved, rejected, fraudFlagged, payoutSum] = await Promise.all([
+    const prevWeek = "created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days'";
+    const currWeek = "created_at >= NOW() - INTERVAL '7 days'";
+
+    const [workers, policies, claimsTotal, approved, rejected, fraudFlagged, payoutSum, prevClaimsTotal] = await Promise.all([
         pool.query('SELECT COUNT(*) FROM workers'),
         pool.query("SELECT COUNT(*) FROM policies WHERE status = 'ACTIVE'"),
         pool.query('SELECT COUNT(*) FROM claims'),
         pool.query("SELECT COUNT(*) FROM claims WHERE status = 'APPROVED'"),
         pool.query("SELECT COUNT(*) FROM claims WHERE status = 'REJECTED'"),
-        pool.query("SELECT COUNT(*) FROM claims WHERE las_score IS NOT NULL AND las_score < 0.35"),
+        pool.query("SELECT COUNT(*) FROM claims WHERE las_score IS NOT NULL AND las_score < (SELECT value FROM system_config WHERE key = 'FRAUD_LAS_THRESHOLD')"),
         pool.query("SELECT COALESCE(SUM(amount), 0) as total FROM wallet_ledger WHERE category = 'CLAIM_PAYOUT' AND type = 'CREDIT'"),
+        pool.query(`SELECT COUNT(*) FROM claims WHERE ${prevWeek}`),
     ]);
 
     const total = parseInt(claimsTotal.rows[0].count, 10);
+    const prevTotal = parseInt(prevClaimsTotal.rows[0].count, 10);
     const approvedCount = parseInt(approved.rows[0].count, 10);
     const flaggedCount = parseInt(fraudFlagged.rows[0].count, 10);
+
+    // Trend calculation (curr vs prev)
+    const calculateTrend = (curr: number, prev: number) => {
+        if (prev === 0) return curr > 0 ? '+100%' : '0%';
+        const diff = ((curr - prev) / prev) * 100;
+        return (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
+    };
 
     return {
         totalWorkers: parseInt(workers.rows[0].count, 10),
         activePolicies: parseInt(policies.rows[0].count, 10),
         totalClaims: total,
+        claimsTrend: calculateTrend(total, prevTotal),
         approvalRate: total > 0 ? parseFloat(((approvedCount / total) * 100).toFixed(1)) : 0,
         fraudRate: total > 0 ? parseFloat(((flaggedCount / total) * 100).toFixed(1)) : 0,
         totalPayout: parseFloat(payoutSum.rows[0].total) || 0,
@@ -115,26 +217,24 @@ export const getRiskOverview = async () => {
 
 // ── ACTIVE DISRUPTIONS / EVENTS ──────────────────────────────────────────────
 
-export const getActiveEvents = async () => {
+export const getActiveDisruptions = async () => {
     const res = await pool.query(`
-        SELECT z.name as zone_name, h.zone_id, h.avg_risk_score, h.max_order_drop_percentage, h.hour_timestamp
-        FROM hourly_risk_analytics h
-        JOIN zones z ON z.id = h.zone_id
-        WHERE h.avg_risk_score >= 0.50
-        ORDER BY h.hour_timestamp DESC
-        LIMIT 30
+        SELECT z.name as zone_name, zs.zone_id, zs.risk_score, zs.order_drop_percentage, zs.created_at
+        FROM zone_risk_snapshots zs
+        JOIN zones z ON z.id = zs.zone_id
+        WHERE zs.risk_score >= (SELECT value FROM system_config WHERE key = 'BASE_EVENT_THRESHOLD')
+        AND zs.created_at >= NOW() - INTERVAL '2 hours'
+        ORDER BY zs.created_at DESC
+        LIMIT 10
     `);
 
-    return {
-        activeEvents: res.rows.map(r => ({
-            zoneId: r.zone_id,
-            zoneName: r.zone_name,
-            avgRisk: parseFloat(r.avg_risk_score),
-            maxDrop: parseFloat(r.max_order_drop_percentage),
-            hourWindow: r.hour_timestamp,
-            triggered: true,
-        })),
-    };
+    return res.rows.map(r => ({
+        zoneId: r.zone_id,
+        zoneName: r.zone_name,
+        riskScore: parseFloat(r.risk_score),
+        orderDrop: parseFloat(r.order_drop_percentage),
+        timestamp: r.created_at
+    }));
 };
 
 // ── CLAIMS SUMMARY ───────────────────────────────────────────────────────────
@@ -201,29 +301,33 @@ export const getClaimsDetail = async (filters: { zoneId?: string; status?: strin
 
 // ── FRAUD ─────────────────────────────────────────────────────────────────────
 
-export const getFraudInsights = async () => {
+export const getFraudMetrics = async () => {
+    const thresholdRes = await pool.query("SELECT value FROM system_config WHERE key = 'FRAUD_LAS_THRESHOLD'");
+    const threshold = parseFloat(thresholdRes.rows[0]?.value || '0.60');
+
     const [totalRes, flaggedRes, lasDistRes, recentFlaggedRes] = await Promise.all([
         pool.query('SELECT COUNT(*)::int as count FROM claims'),
-        pool.query("SELECT COUNT(*)::int as count FROM claims WHERE las_score IS NOT NULL AND las_score < 0.60"),
+        pool.query("SELECT COUNT(*)::int as count FROM claims WHERE las_score IS NOT NULL AND las_score < $1", [threshold]),
         pool.query(`
             SELECT
                 SUM(CASE WHEN las_score >= 0.85 THEN 1 ELSE 0 END)::int as clean,
-                SUM(CASE WHEN las_score >= 0.60 AND las_score < 0.85 THEN 1 ELSE 0 END)::int as soft_flag,
-                SUM(CASE WHEN las_score >= 0.35 AND las_score < 0.60 THEN 1 ELSE 0 END)::int as hold,
+                SUM(CASE WHEN las_score >= $1 AND las_score < 0.85 THEN 1 ELSE 0 END)::int as soft_flag,
+                SUM(CASE WHEN las_score >= 0.35 AND las_score < $1 THEN 1 ELSE 0 END)::int as hold,
                 SUM(CASE WHEN las_score < 0.35 THEN 1 ELSE 0 END)::int as rejected
             FROM claims WHERE las_score IS NOT NULL
-        `),
+        `, [threshold]),
         pool.query(`
             SELECT id, worker_id, las_score, status, rejection_reason, created_at
-            FROM claims WHERE las_score IS NOT NULL AND las_score < 0.60
+            FROM claims WHERE las_score IS NOT NULL AND las_score < $1
             ORDER BY created_at DESC LIMIT 10
-        `),
+        `, [threshold]),
     ]);
 
     const total = totalRes.rows[0].count;
     const flagged = flaggedRes.rows[0].count;
 
     return {
+        threshold,
         fraudRate: total > 0 ? parseFloat(((flagged / total) * 100).toFixed(1)) : 0,
         flaggedClaims: flagged,
         lasDistribution: lasDistRes.rows[0] || { clean: 0, soft_flag: 0, hold: 0, rejected: 0 },
@@ -268,7 +372,8 @@ export const getQueueStats = async () => {
 
     return Promise.all(queues.map(async (q) => {
         const counts = await q.instance.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
-        return { queueName: q.name, ...counts };
+        const workers = await q.instance.getWorkers();
+        return { queueName: q.name, ...counts, workers };
     }));
 };
 
@@ -289,6 +394,104 @@ export const getMlMetrics = async () => {
         inferenceCount: inferenceRes.rows[0].count,
         anomalyRate: parseFloat(((anomalyRes.rows[0].count / totalH) * 100).toFixed(1)),
     };
+};
+
+// ── SYSTEM CONFIGURATION ───────────────────────────────────────────────────
+
+export const getSystemConfig = async () => {
+    const res = await pool.query('SELECT key, value, min_range, max_range, description FROM system_config');
+    return res.rows;
+};
+
+export const updateSystemConfig = async (key: string, value: number) => {
+    const res = await pool.query(
+        'UPDATE system_config SET value = $1, updated_at = NOW() WHERE key = $2 RETURNING *',
+        [value, key]
+    );
+    return res.rows[0];
+};
+
+// ── CLAIM PIPELINE ──────────────────────────────────────────────────────────
+
+export const getClaimPipelineStats = async () => {
+    const res = await pool.query(`
+        SELECT status, COUNT(*)::int as count 
+        FROM claims 
+        WHERE created_at >= NOW() - INTERVAL '7 days'
+        GROUP BY status
+    `);
+    
+    const stats: any = { PENDING: 0, APPROVED: 0, PAID: 0, REJECTED: 0 };
+    res.rows.forEach(r => { stats[r.status] = r.count; });
+    
+    // In our system, APPROVED claims are processed for payout
+    const paidRes = await pool.query(`
+        SELECT COUNT(*)::int as count FROM wallet_ledger 
+        WHERE category = 'CLAIM_PAYOUT' AND type = 'CREDIT' 
+        AND created_at >= NOW() - INTERVAL '7 days'
+    `);
+    stats.PAID = paidRes.rows[0].count;
+
+    return stats;
+};
+
+// ── OPERATIONAL REPORT (CSV) ────────────────────────────────────────────────
+
+export const generateOperationalReport = async () => {
+    const window = "INTERVAL '7 days'";
+    const [summary, claims, payouts, risk] = await Promise.all([
+        pool.query(`
+            SELECT 
+                COUNT(*)::int as total_claims,
+                ROUND(AVG(CASE WHEN status='APPROVED' THEN 1 ELSE 0 END)*100, 1) as approval_rate,
+                COALESCE(SUM(payout_amount), 0) as total_payout
+            FROM claims WHERE created_at >= NOW() - ${window}
+        `),
+        pool.query(`
+            SELECT id, worker_id, status, payout_amount, risk_score, created_at 
+            FROM claims WHERE created_at >= NOW() - ${window} ORDER BY created_at DESC LIMIT 50
+        `),
+        pool.query(`
+            SELECT id, worker_id, amount, category, created_at 
+            FROM wallet_ledger WHERE created_at >= NOW() - ${window} ORDER BY created_at DESC LIMIT 50
+        `),
+        pool.query(`
+            SELECT z.name as zone, zs.risk_score, zs.order_drop_percentage, zs.created_at
+            FROM zone_risk_snapshots zs
+            JOIN zones z ON z.id = zs.zone_id
+            WHERE zs.created_at >= NOW() - ${window} ORDER BY zs.created_at DESC LIMIT 50
+        `)
+    ]);
+
+    let csv = `Generated At,${new Date().toISOString()}\n`;
+    csv += `Time Window,Last 7 Days\n\n`;
+
+    csv += `SECTION 1: SUMMARY\n`;
+    csv += `Total Claims,Approval Rate,Total Payout\n`;
+    const s = summary.rows[0];
+    csv += `${s.total_claims},${s.approval_rate}%,${s.total_payout}\n\n`;
+
+    csv += `SECTION 2: CLAIMS (Recent 50)\n`;
+    csv += `ID,Worker ID,Status,Amount,Risk Score,Created At\n`;
+    claims.rows.forEach(r => {
+        csv += `${r.id},${r.worker_id},${r.status},${r.payout_amount},${r.risk_score},${r.created_at.toISOString()}\n`;
+    });
+    csv += `\n`;
+
+    csv += `SECTION 3: PAYOUTS (Recent 50)\n`;
+    csv += `ID,Worker ID,Amount,Category,Created At\n`;
+    payouts.rows.forEach(r => {
+        csv += `${r.id},${r.worker_id},${r.amount},${r.category},${r.created_at.toISOString()}\n`;
+    });
+    csv += `\n`;
+
+    csv += `SECTION 4: RISK (Recent 50 snapshots)\n`;
+    csv += `Zone,Risk Score,Order Drop %,Timestamp\n`;
+    risk.rows.forEach(r => {
+        csv += `${r.zone},${r.risk_score},${r.order_drop_percentage},${r.created_at.toISOString()}\n`;
+    });
+
+    return csv;
 };
 
 // ── PRICING ──────────────────────────────────────────────────────────────────
