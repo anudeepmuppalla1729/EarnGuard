@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS claims (
     disruption_type TEXT,
     status TEXT CHECK (status IN ('APPROVED','REJECTED','PENDING')),
     claim_type TEXT DEFAULT 'SYSTEM' CHECK (claim_type IN ('SYSTEM','MANUAL')),
+    las_score NUMERIC(4,2),
+    zone_id TEXT REFERENCES zones(id),
     claim_timeframe_start TIMESTAMP,
     claim_timeframe_end TIMESTAMP,
     claim_note TEXT,

@@ -102,6 +102,56 @@ function splitIntoHourlyIntervals(start: Date, end: Date): HourlyInterval[] {
   return intervals;
 }
 
+// ── Anti-Spoofing Logic ───────────────────────────────────────────────────────
+
+async function computeLocationAuthenticityScore(client: PoolClient, worker: any, timeframeStart: Date): Promise<{ score: number; log: any }> {
+  let score = 0.50; // Base baseline
+  const log: any = {};
+
+  try {
+    // 1. App Active Check-in (is_online)
+    const workerRes = await axios.get(`${SIM_URL}/platform/workers/${worker.platform_worker_id}`);
+    if (workerRes.status === 200 && workerRes.data.is_online) {
+      score += 0.25;
+      log.is_online = true;
+    } else {
+      log.is_online = false;
+    }
+
+    // 2. Platform Drop Severity (>30%)
+    const platformRes = await axios.get(`${SIM_URL}/platform?zoneId=${worker.zone_id}`);
+    if (platformRes.status === 200) {
+      const dropPct = platformRes.data.orderDropPercentage || 0;
+      log.orderDropPercentage = dropPct;
+      if (dropPct > 30) {
+        score += 0.25;
+      }
+    }
+
+    // 3. Ring Detection (Clustering)
+    const recentClaimsRes = await client.query(
+      `SELECT COUNT(*) FROM claims
+       WHERE zone_id = $1 AND claim_type = 'MANUAL'
+         AND created_at >= NOW() - INTERVAL '30 minutes'`,
+      [worker.zone_id]
+    );
+    const recentCount = parseInt(recentClaimsRes.rows[0].count || '0');
+    log.recentZoneClaims = recentCount;
+    // If more than 3 claims in the last 30 minutes in exact same zone, penalize heavily
+    if (recentCount > 3) {
+      score -= 0.40;
+      log.ringFlag = true;
+    }
+
+  } catch (err: any) {
+    console.warn('[ManualClaim] LAS computation warning:', err.message);
+  }
+
+  // Clamp 0 to 1
+  score = Math.max(0, Math.min(1, score));
+  return { score, log };
+}
+
 // ── Main Service ─────────────────────────────────────────────────────────────
 
 export async function processManualClaim(input: ManualClaimInput): Promise<ClaimResult> {
@@ -161,16 +211,16 @@ export async function processManualClaim(input: ManualClaimInput): Promise<Claim
 
     const worker = policyRes.rows[0];
 
-    // 4. Cooldown check — no duplicate manual claims within 24h
+    // 4. Cooldown check — maximum 3 approved manual claims within 24h
     const cooldownRes = await client.query(
-      `SELECT id FROM claims
+      `SELECT COUNT(*) FROM claims
        WHERE worker_id = $1 AND claim_type = 'MANUAL' AND status = 'APPROVED'
          AND created_at > NOW() - INTERVAL '24 hours'`,
       [input.workerId]
     );
 
-    if (cooldownRes.rows.length > 0) {
-      throw { status: 429, code: 'COOLDOWN_ACTIVE', message: 'You can only file one approved manual claim every 24 hours' };
+    if (parseInt(cooldownRes.rows[0].count) >= 3) {
+      throw { status: 429, code: 'COOLDOWN_ACTIVE', message: 'You can only file up to 3 approved manual claims every 24 hours' };
     }
 
     // 5. Parse and normalize timestamps to UTC
@@ -216,11 +266,11 @@ export async function processManualClaim(input: ManualClaimInput): Promise<Claim
     const weightedRiskScore = totalWeight > 0 ? totalWeightedRisk / totalWeight : 0;
     console.log(`[ManualClaim] Final Weighted Risk: ${weightedRiskScore.toFixed(4)} | Threshold: ${RISK_THRESHOLD} | Partial: ${hasPartialData}`);
 
-    // 8. Decision: approve or reject
+    // 8. Base Disruption Parametric Check
     const claimId = uuidv4();
 
     if (weightedRiskScore < RISK_THRESHOLD) {
-      // REJECTED — risk too low
+      // REJECTED — risk too low systemically
       let rejectionReason = `Risk score ${weightedRiskScore.toFixed(2)} is below threshold ${RISK_THRESHOLD}`;
       if (hasPartialData) {
         rejectionReason += '. Partial data available for the requested timeframe.';
@@ -229,11 +279,11 @@ export async function processManualClaim(input: ManualClaimInput): Promise<Claim
       await client.query(
         `INSERT INTO claims (id, policy_id, worker_id, payout_amount, risk_score, severity_multiplier,
                              disruption_type, status, claim_type, claim_timeframe_start, claim_timeframe_end,
-                             claim_note, rejection_reason, client_request_id)
-         VALUES ($1, $2, $3, 0, $4, 1.0, $5, 'REJECTED', 'MANUAL', $6, $7, $8, $9, $10)`,
+                             claim_note, rejection_reason, client_request_id, zone_id)
+         VALUES ($1, $2, $3, 0, $4, 1.0, $5, 'REJECTED', 'MANUAL', $6, $7, $8, $9, $10, $11)`,
         [claimId, worker.policy_id, input.workerId, weightedRiskScore,
          input.disruptionType, tfStart.toISOString(), tfEnd.toISOString(),
-         input.note, rejectionReason, input.clientRequestId]
+         input.note, rejectionReason, input.clientRequestId, worker.zone_id]
       );
 
       await client.query('COMMIT');
@@ -260,7 +310,39 @@ export async function processManualClaim(input: ManualClaimInput): Promise<Claim
       };
     }
 
-    // 9. APPROVED — calculate payout using same logic as payoutWorker
+    // 9. Location Authenticity Score (Anti-Spoofing)
+    console.log(`[ManualClaim] Parametric passed. Computing LAS for Worker ${input.workerId}`);
+    const las = await computeLocationAuthenticityScore(client, worker, tfStart);
+    console.log(`[ManualClaim] LAS Score: ${las.score.toFixed(2)} | Log:`, las.log);
+
+    // Hard Reject tier
+    if (las.score < 0.35) {
+      const spoofReason = `Claim rejected by Anti-Spoofing checks (LAS: ${las.score.toFixed(2)}). Anomaly detected.`;
+      await client.query(
+        `INSERT INTO claims (id, policy_id, worker_id, payout_amount, risk_score, severity_multiplier,
+                             disruption_type, status, claim_type, claim_timeframe_start, claim_timeframe_end,
+                             claim_note, rejection_reason, client_request_id, zone_id, las_score)
+         VALUES ($1, $2, $3, 0, $4, 1.0, $5, 'REJECTED', 'MANUAL', $6, $7, $8, $9, $10, $11, $12)`,
+        [claimId, worker.policy_id, input.workerId, weightedRiskScore,
+         input.disruptionType, tfStart.toISOString(), tfEnd.toISOString(),
+         input.note, spoofReason, input.clientRequestId, worker.zone_id, las.score]
+      );
+      await client.query('COMMIT');
+      
+      return {
+        claim: {
+          id: claimId,
+          status: 'REJECTED',
+          riskScore: weightedRiskScore,
+          lasScore: las.score,
+          rejectionReason: spoofReason,
+          payoutAmount: 0,
+        },
+        isExisting: false,
+      };
+    }
+
+    // 10. APPROVED / PENDING — calculate payout
 
     // Duration in hours based on actual user timeframe
     const durationHours = (tfEnd.getTime() - tfStart.getTime()) / (1000 * 60 * 60);
@@ -287,38 +369,51 @@ export async function processManualClaim(input: ManualClaimInput): Promise<Claim
 
     console.log(`[ManualClaim] Payout Calc — income: ₹${incomeRate}/hr | duration: ${durationHours.toFixed(2)}h | loss: ₹${intervalLoss.toFixed(2)} | payout: ₹${payout.toFixed(2)}`);
 
-    // Insert approved claim
+    // Tier routing based on LAS
+    let finalStatus = 'APPROVED';
+    let extendedNote = input.note;
+
+    if (las.score >= 0.60 && las.score < 0.85) {
+      finalStatus = 'APPROVED';
+      extendedNote = `${input.note}\n[SYSTEM: SOFT-FLAG - Async review required (LAS: ${las.score.toFixed(2)})]`;
+    } else if (las.score >= 0.35 && las.score < 0.60) {
+      finalStatus = 'PENDING';
+      extendedNote = `${input.note}\n[SYSTEM: HOLD & VERIFY (LAS: ${las.score.toFixed(2)})]`;
+    }
+
+    // Insert claim
     await client.query(
       `INSERT INTO claims (id, policy_id, worker_id, payout_amount, risk_score, severity_multiplier,
                            disruption_type, status, claim_type, claim_timeframe_start, claim_timeframe_end,
-                           claim_note, client_request_id)
-       VALUES ($1, $2, $3, $4, $5, 1.0, $6, 'APPROVED', 'MANUAL', $7, $8, $9, $10)`,
+                           claim_note, client_request_id, zone_id, las_score)
+       VALUES ($1, $2, $3, $4, $5, 1.0, $6, $7, 'MANUAL', $8, $9, $10, $11, $12, $13)`,
       [claimId, worker.policy_id, input.workerId, payout, weightedRiskScore,
-       input.disruptionType, tfStart.toISOString(), tfEnd.toISOString(),
-       input.note, input.clientRequestId]
+       input.disruptionType, finalStatus, tfStart.toISOString(), tfEnd.toISOString(),
+       extendedNote, input.clientRequestId, worker.zone_id, las.score]
     );
 
-    // Credit wallet
-    await client.query(
-      `INSERT INTO wallet_ledger (id, worker_id, amount, type, category, reference_id, idempotency_key)
-       VALUES ($1, $2, $3, 'CREDIT', 'CLAIM_PAYOUT', $4, $5)`,
-      [uuidv4(), input.workerId, payout, claimId, `manual-payout-${claimId}`]
-    );
+    // Credit wallet and outbox ONLY IF APPROVED
+    if (finalStatus === 'APPROVED') {
+      await client.query(
+        `INSERT INTO wallet_ledger (id, worker_id, amount, type, category, reference_id, idempotency_key)
+         VALUES ($1, $2, $3, 'CREDIT', 'CLAIM_PAYOUT', $4, $5)`,
+        [uuidv4(), input.workerId, payout, claimId, `manual-payout-${claimId}`]
+      );
 
-    // Outbox event
-    await client.query(
-      `INSERT INTO outbox_events (id, event_type, payload, status)
-       VALUES ($1, 'MANUAL_CLAIM_APPROVED', $2, 'PENDING')`,
-      [uuidv4(), JSON.stringify({
-        workerId: input.workerId,
-        amount: payout,
-        disruptionType: input.disruptionType,
-        reason: `Manual claim approved — weighted risk ${weightedRiskScore.toFixed(2)}`,
-      })]
-    );
+      await client.query(
+        `INSERT INTO outbox_events (id, event_type, payload, status)
+         VALUES ($1, 'MANUAL_CLAIM_APPROVED', $2, 'PENDING')`,
+        [uuidv4(), JSON.stringify({
+          workerId: input.workerId,
+          amount: payout,
+          disruptionType: input.disruptionType,
+          reason: `Manual claim approved — weighted risk ${weightedRiskScore.toFixed(2)}`,
+        })]
+      );
+    }
 
     await client.query('COMMIT');
-    console.log(`[ManualClaim] APPROVED — Worker ${input.workerId} | Payout: ₹${payout.toFixed(2)}`);
+    console.log(`[ManualClaim] ${finalStatus} — Worker ${input.workerId} | Payout: ₹${payout.toFixed(2)} | LAS: ${las.score.toFixed(2)}`);
 
     return {
       claim: {

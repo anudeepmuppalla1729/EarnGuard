@@ -9,6 +9,7 @@ import { s, vs, ms } from '../theme/responsive';
 import {
   ChevronLeft, CloudRain, Waves, TrafficCone, Users, Zap,
   Clock, FileText, Send, CheckCircle, XCircle, ChevronDown,
+  AlertCircle
 } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeInDown, FadeIn, SlideInRight } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -136,29 +137,42 @@ export default function FileClaimScreen() {
 
   if (step === 'result' && result) {
     const isApproved = result.status === 'APPROVED';
+    const isPending = result.status === 'PENDING';
+    const isRejected = result.status === 'REJECTED';
+
+    let iconColor = theme.colors.error;
+    let iconBg = theme.colors.errorLight;
+    if (isApproved) {
+      iconColor = theme.colors.success;
+      iconBg = theme.colors.successLight;
+    } else if (isPending) {
+      iconColor = theme.colors.warning;
+      iconBg = theme.colors.warningLight;
+    }
+
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.resultContainer}>
           <Animated.View entering={FadeIn.duration(400)} style={styles.resultContent}>
             <Animated.View entering={FadeInDown.delay(200).duration(500)} style={[
               styles.resultIconCircle,
-              { backgroundColor: isApproved ? theme.colors.successLight : theme.colors.errorLight },
+              { backgroundColor: iconBg },
             ]}>
-              {isApproved
-                ? <CheckCircle size={s(48)} color={theme.colors.success} />
-                : <XCircle size={s(48)} color={theme.colors.error} />
-              }
+              {isApproved && <CheckCircle size={s(48)} color={iconColor} />}
+              {isPending && <AlertCircle size={s(48)} color={iconColor} />}
+              {isRejected && <XCircle size={s(48)} color={iconColor} />}
             </Animated.View>
 
             <Animated.Text entering={FadeInUp.delay(300).duration(400)} style={styles.resultTitle}>
-              {isApproved ? 'Claim Approved!' : 'Claim Rejected'}
+              {isApproved && 'Claim Approved!'}
+              {isPending && 'Claim Pending Verification'}
+              {isRejected && 'Claim Rejected'}
             </Animated.Text>
 
             <Animated.Text entering={FadeInUp.delay(400).duration(400)} style={styles.resultSubtitle}>
-              {isApproved
-                ? `₹${result.payoutAmount.toFixed(2)} has been credited to your wallet`
-                : result.rejectionReason || 'Risk score below threshold for the reported timeframe'
-              }
+              {isApproved && `₹${result.payoutAmount.toFixed(2)} has been credited to your wallet`}
+              {isPending && 'Your claim is under review. Our team will verify your location shortly.'}
+              {isRejected && (result.rejectionReason || 'Risk score below threshold for the reported timeframe')}
             </Animated.Text>
 
             <Animated.View entering={FadeInUp.delay(500).duration(400)} style={styles.resultDetails}>
@@ -171,20 +185,18 @@ export default function FileClaimScreen() {
               <View style={styles.resultDivider} />
               <View style={styles.resultRow}>
                 <Text style={styles.resultLabel}>Status</Text>
-                <View style={[styles.resultBadge, {
-                  backgroundColor: isApproved ? theme.colors.successLight : theme.colors.errorLight,
-                }]}>
-                  <Text style={[styles.resultBadgeText, {
-                    color: isApproved ? theme.colors.success : theme.colors.error,
-                  }]}>{result.status}</Text>
+                <View style={[styles.resultBadge, { backgroundColor: iconBg }]}>
+                  <Text style={[styles.resultBadgeText, { color: iconColor }]}>
+                    {result.status}
+                  </Text>
                 </View>
               </View>
-              {isApproved && (
+              {(isApproved || isPending) && result.payoutAmount > 0 && (
                 <>
                   <View style={styles.resultDivider} />
                   <View style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>Payout</Text>
-                    <Text style={[styles.resultValue, { color: theme.colors.success }]}>
+                    <Text style={styles.resultLabel}>Expected Payout</Text>
+                    <Text style={[styles.resultValue, { color: iconColor }]}>
                       ₹{result.payoutAmount.toFixed(2)}
                     </Text>
                   </View>
