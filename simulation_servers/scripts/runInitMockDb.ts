@@ -7,7 +7,7 @@ import * as path from "path";
 const pool = new Pool({
   connectionString:
     process.env.DATABASE_URL ||
-    "postgres://postgres:Anudeep%401904@localhost:5432/mock",
+    "postgres://postgres:050506@localhost:5432/mock",
 });
 
 async function initMockDb() {
