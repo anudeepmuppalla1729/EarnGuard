@@ -40,12 +40,21 @@ export function Overview() {
   };
 
   const handleDownloadReport = async () => {
-    const link = document.createElement('a');
-    link.href = `${apiClient.defaults.baseURL}/report/download`;
-    link.setAttribute('download', 'report.csv');
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    try {
+      const response = await apiClient.get('/report/download', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `earnguard_report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
   };
 
   const getTimeAgo = (ts: string | null) => {
@@ -320,7 +329,7 @@ export function Overview() {
                   }] : []),
                   { icon: <CheckCircle size={14} className="text-teal-600" />, text: `Active Node: ${health?.servers?.[0]?.name || 'Core'}`, time: 'Healthy' }
                 ].map((s: any, i) => (
-                  <div key={i} className={`flex gap-3 items-start p-2 rounded-xl transition-all ${s.highlight ? 'bg-orange-50/50 border border-orange-100 animate-in pulse-live' : ''}`}>
+                  <div key={i} className={`flex gap-3 items-start p-2 rounded-xl transition-all ${s.highlight ? 'bg-orange-50 border border-orange-100' : ''}`}>
                     <div className="mt-0.5">{s.icon}</div>
                     <div className="overflow-hidden">
                       <p className="text-[11px] font-semibold leading-tight truncate">{s.text}</p>

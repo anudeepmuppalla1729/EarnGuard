@@ -219,13 +219,13 @@ export const getRiskOverview = async () => {
 
 export const getActiveDisruptions = async () => {
     const res = await pool.query(`
-        SELECT z.name as zone_name, zs.zone_id, zs.risk_score, zs.order_drop_percentage, zs.created_at
+        SELECT DISTINCT ON (zs.zone_id)
+            z.name as zone_name, zs.zone_id, zs.risk_score, zs.order_drop_percentage, zs.created_at
         FROM zone_risk_snapshots zs
         JOIN zones z ON z.id = zs.zone_id
         WHERE zs.risk_score >= (SELECT value FROM system_config WHERE key = 'BASE_EVENT_THRESHOLD')
         AND zs.created_at >= NOW() - INTERVAL '2 hours'
-        ORDER BY zs.created_at DESC
-        LIMIT 10
+        ORDER BY zs.zone_id, zs.created_at DESC
     `);
 
     return res.rows.map(r => ({
