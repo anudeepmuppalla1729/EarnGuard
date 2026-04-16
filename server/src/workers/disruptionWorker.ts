@@ -9,7 +9,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const SIM_URL = process.env.SIM_URL || 'http://localhost:4000';
-const RISK_THRESHOLD = 0.65; // Threshold to trigger claim payouts
+const RISK_THRESHOLD = 0.50; // Threshold to trigger claim payouts
 
 /** Weather logic computation */
 function computeWeatherRisk(weatherData: any): number {

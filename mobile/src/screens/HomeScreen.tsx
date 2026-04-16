@@ -4,9 +4,14 @@ import { useAuthStore } from '../store/authStore';
 import { useWalletStore } from '../store/walletStore';
 import { usePolicyStore } from '../store/policyStore';
 import { useClaimsStore } from '../store/claimsStore';
+import { useDashboardStore } from '../store/dashboardStore';
 import { theme } from '../theme/theme';
 import { s, vs, ms } from '../theme/responsive';
-import { TrendingUp, ShieldCheck, CloudRain, Car, ChevronRight, CreditCard, Shield, Info } from 'lucide-react-native';
+import {
+  TrendingUp, ShieldCheck, CloudRain, Car, ChevronRight,
+  CreditCard, Shield, Info, AlertTriangle, Zap, TrendingDown,
+  Waves, TrafficCone, CheckCircle,
+} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { SharedHeader } from '../components/SharedHeader';
@@ -17,13 +22,14 @@ import Animated, {
   Easing,
   FadeInUp
 } from 'react-native-reanimated';
+import { formatDate } from '../api/mockData';
+import type { DashboardZoneInsight, DashboardActivity } from '../types';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const user = useAuthStore(s => s.user);
   const balance = useWalletStore(s => s.balance);
-  const activePolicy = usePolicyStore(s => s.activePolicy);
-  const totalEarned = useClaimsStore(s => s.totalEarned);
+  const dashboardData = useDashboardStore(s => s.data);
   const [refreshing, setRefreshing] = useState(false);
   
   const onRefresh = useCallback(async () => {
@@ -34,9 +40,18 @@ export default function HomeScreen() {
       usePolicyStore.getState().fetchPolicies(),
       useClaimsStore.getState().fetchClaims(),
       useAuthStore.getState().fetchProfile(),
+      useDashboardStore.getState().fetchDashboard(),
     ]);
     setRefreshing(false);
   }, []);
+
+  // Derived values from dashboard data
+  const todayCredits = dashboardData?.todayCredits ?? 0;
+  const latestRisk = dashboardData?.latestRisk;
+  const policy = dashboardData?.policy;
+  const zoneInsights = dashboardData?.zoneInsights ?? [];
+  const recentActivity = dashboardData?.recentActivity ?? [];
+  const showRiskAlert = latestRisk && latestRisk.riskScore >= 0.3;
 
   return (
     <View style={styles.container}>
@@ -61,28 +76,68 @@ export default function HomeScreen() {
             <AnimatedBalance value={balance} />
           </View>
           <View style={styles.trendingRow}>
-            <TrendingUp size={s(14)} color={theme.colors.success} />
-            <Text style={styles.trendingText}>₹12.40 credited today</Text>
+            {todayCredits > 0 ? (
+              <>
+                <TrendingUp size={s(14)} color={theme.colors.success} />
+                <Text style={styles.trendingText}>₹{todayCredits.toFixed(2)} credited today</Text>
+              </>
+            ) : (
+              <>
+                <Info size={s(14)} color={theme.colors.onSurfaceVariant} />
+                <Text style={[styles.trendingText, { color: theme.colors.onSurfaceVariant }]}>No credits yet today</Text>
+              </>
+            )}
           </View>
         </View>
 
-        {/* Dynamic Risk Alert - If any */}
-        <View style={styles.alertSection}>
-          <View style={styles.riskAlert}>
-            <View style={[styles.alertIcon, { backgroundColor: theme.colors.warningLight }]}>
-              <CloudRain size={s(18)} color={theme.colors.warning} />
+        {/* Dynamic Risk Alert - Only shown when risk >= 0.3 */}
+        {showRiskAlert && (
+          <View style={styles.alertSection}>
+            <View style={styles.riskAlert}>
+              <View style={[styles.alertIcon, {
+                backgroundColor: latestRisk.riskScore >= 0.7
+                  ? theme.colors.errorLight
+                  : theme.colors.warningLight
+              }]}>
+                {getRiskIcon(latestRisk.riskScore)}
+              </View>
+              <View style={styles.alertContent}>
+                <Text style={styles.alertTitle}>{latestRisk.riskLabel}</Text>
+                <Text style={styles.alertDesc}>
+                  {latestRisk.zoneName} • {latestRisk.orderDrop > 0 ? `${latestRisk.orderDrop.toFixed(0)}% order drop` : 'Monitoring active'}
+                </Text>
+              </View>
+              <View style={[styles.riskBadge, {
+                backgroundColor: latestRisk.riskScore >= 0.7
+                  ? theme.colors.errorLight
+                  : theme.colors.warningLight,
+              }]}>
+                <Text style={[styles.riskBadgeText, {
+                  color: latestRisk.riskScore >= 0.7
+                    ? theme.colors.error
+                    : theme.colors.warning,
+                }]}>{(latestRisk.riskScore * 100).toFixed(0)}%</Text>
+              </View>
             </View>
-            <View style={styles.alertContent}>
-              <Text style={styles.alertTitle}>Rain disruption likely</Text>
-              <Text style={styles.alertDesc}>Zone 4 • 2:00 PM – 4:00 PM</Text>
-            </View>
-            <HapticAction style={styles.alertAction}>
-              <Text style={styles.alertActionText}>Details</Text>
-            </HapticAction>
           </View>
-        </View>
+        )}
 
-        {/* Simplified Policy Section */}
+        {/* No active risk — all clear */}
+        {!showRiskAlert && latestRisk !== undefined && (
+          <View style={styles.alertSection}>
+            <View style={styles.riskAlert}>
+              <View style={[styles.alertIcon, { backgroundColor: theme.colors.successLight }]}>
+                <CheckCircle size={s(18)} color={theme.colors.success} />
+              </View>
+              <View style={styles.alertContent}>
+                <Text style={styles.alertTitle}>All clear</Text>
+                <Text style={styles.alertDesc}>No active disruptions in your zone</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Policy Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionHeader}>PROTECTION</Text>
@@ -91,50 +146,64 @@ export default function HomeScreen() {
             </HapticAction>
           </View>
           
-          <HapticAction onPress={() => navigation.navigate('Policy')} style={styles.policyMinimalCard}>
-            <View style={styles.policyInfoRow}>
-              <View style={styles.policyMainInfo}>
-                <Text style={styles.policyName}>{'Income Shield Plus'}</Text>
-                <View style={styles.policyStatusRow}>
-                  <View style={[styles.statusDot, { backgroundColor: theme.colors.success }]} />
-                  <Text style={styles.statusText}>Active</Text>
+          {policy ? (
+            <HapticAction onPress={() => navigation.navigate('Policy')} style={styles.policyMinimalCard}>
+              <View style={styles.policyInfoRow}>
+                <View style={styles.policyMainInfo}>
+                  <Text style={styles.policyName}>Income Shield {policy.tierName}</Text>
+                  <View style={styles.policyStatusRow}>
+                    <View style={[styles.statusDot, { backgroundColor: theme.colors.success }]} />
+                    <Text style={styles.statusText}>Active</Text>
+                  </View>
+                </View>
+                <ShieldCheck size={s(24)} color={theme.colors.primary} />
+              </View>
+              
+              <View style={styles.policyMetricsRow}>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>COVERAGE</Text>
+                  <Text style={styles.metricValue}>{policy.coverageMultiplier}x Multiplier</Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>RENEWS</Text>
+                  <Text style={styles.metricValue}>{formatRenewalDate(policy.renewalDate)}</Text>
                 </View>
               </View>
-              <ShieldCheck size={s(24)} color={theme.colors.primary} />
-            </View>
-            
-            <View style={styles.policyMetricsRow}>
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>COVERAGE</Text>
-                <Text style={styles.metricValue}>{activePolicy?.coverageMultiplier || '2.5'}x Multiplier</Text>
+            </HapticAction>
+          ) : (
+            <HapticAction onPress={() => navigation.navigate('Policy')} style={styles.policyMinimalCard}>
+              <View style={styles.policyInfoRow}>
+                <View style={styles.policyMainInfo}>
+                  <Text style={styles.policyName}>No Active Policy</Text>
+                  <View style={styles.policyStatusRow}>
+                    <View style={[styles.statusDot, { backgroundColor: theme.colors.outline }]} />
+                    <Text style={styles.statusText}>Get protected</Text>
+                  </View>
+                </View>
+                <Shield size={s(24)} color={theme.colors.outline} />
               </View>
-              <View style={styles.metricDivider} />
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>NEXT PAYOUT</Text>
-                <Text style={styles.metricValue}>August 24</Text>
-              </View>
-            </View>
-          </HapticAction>
+            </HapticAction>
+          )}
         </View>
 
-        {/* Insights Bento - Simplified */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>ZONE INSIGHTS</Text>
-          <View style={styles.bentoGrid}>
-            <HapticAction style={styles.bentoCard}>
-              <Car size={s(20)} color={theme.colors.onSurface} />
-              <Text style={styles.bentoTitle}>Normal traffic</Text>
-              <Text style={styles.bentoSubtitle}>Western Exp Hwy</Text>
-            </HapticAction>
-            <HapticAction style={styles.bentoCard}>
-              <TrendingUp size={s(20)} color={theme.colors.success} />
-              <Text style={styles.bentoTitle}>Peak earnings</Text>
-              <Text style={styles.bentoSubtitle}>Bandra West</Text>
-            </HapticAction>
+        {/* Zone Insights Bento */}
+        {zoneInsights.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionHeader}>ZONE INSIGHTS</Text>
+            <View style={styles.bentoGrid}>
+              {zoneInsights.slice(0, 2).map((zone) => (
+                <HapticAction key={zone.zoneId} style={styles.bentoCard}>
+                  {getZoneIcon(zone)}
+                  <Text style={styles.bentoTitle}>{getZoneLabel(zone)}</Text>
+                  <Text style={styles.bentoSubtitle}>{zone.zoneName}</Text>
+                </HapticAction>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* Recent Activity - Minimalist */}
+        {/* Recent Activity */}
         <View style={[styles.section, { marginBottom: vs(120) }]}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionHeader}>ACTIVITY</Text>
@@ -143,27 +212,73 @@ export default function HomeScreen() {
             </HapticAction>
           </View>
           
-          <View style={styles.minimalActivityList}>
-            <ActivityItem 
-              title="Rain Delay Payout" 
-              amount="+₹50.00" 
-              time="10:45 AM" 
-              type="success"
-            />
-            <ActivityItem 
-              title="Policy Premium" 
-              amount="-₹30.00" 
-              time="Yesterday" 
-            />
-          </View>
+          {recentActivity.length > 0 ? (
+            <View style={styles.minimalActivityList}>
+              {recentActivity.map((item, index) => (
+                <ActivityItem
+                  key={item.id}
+                  title={getActivityTitle(item)}
+                  amount={getActivityAmount(item)}
+                  time={formatDate(item.createdAt)}
+                  type={item.type === 'CREDIT' ? 'success' : undefined}
+                  isLast={index === recentActivity.length - 1}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyActivity}>
+              <Text style={styles.emptyActivityText}>No recent activity</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
   );
 }
 
-const ActivityItem = ({ title, amount, time, type }: any) => (
-  <HapticAction style={styles.minimalActivityItem}>
+// ── Helper Functions ────────────────────────────────────────────────────────
+
+function getRiskIcon(score: number) {
+  if (score >= 0.7) return <AlertTriangle size={s(18)} color={theme.colors.error} />;
+  if (score >= 0.4) return <CloudRain size={s(18)} color={theme.colors.warning} />;
+  return <Info size={s(18)} color={theme.colors.onSurfaceVariant} />;
+}
+
+function getZoneIcon(zone: DashboardZoneInsight) {
+  if (zone.riskScore >= 0.5) return <CloudRain size={s(20)} color={theme.colors.warning} />;
+  if (zone.orderDrop >= 30) return <TrendingDown size={s(20)} color={theme.colors.error} />;
+  if (zone.riskScore < 0.2) return <TrendingUp size={s(20)} color={theme.colors.success} />;
+  return <Car size={s(20)} color={theme.colors.onSurface} />;
+}
+
+function getZoneLabel(zone: DashboardZoneInsight): string {
+  if (zone.riskScore >= 0.7) return 'High risk zone';
+  if (zone.riskScore >= 0.4) return 'Disruption active';
+  if (zone.riskScore >= 0.2) return 'Moderate traffic';
+  return 'Normal conditions';
+}
+
+function getActivityTitle(item: DashboardActivity): string {
+  if (item.category === 'CLAIM_PAYOUT') return 'Claim Payout';
+  if (item.category === 'PREMIUM_PAYMENT') return 'Policy Premium';
+  if (item.category === 'TOPUP') return 'Wallet Top-up';
+  return item.type === 'CREDIT' ? 'Credit' : 'Debit';
+}
+
+function getActivityAmount(item: DashboardActivity): string {
+  const prefix = item.type === 'CREDIT' ? '+' : '-';
+  return `${prefix}₹${item.amount.toFixed(2)}`;
+}
+
+function formatRenewalDate(iso: string): string {
+  const date = new Date(iso);
+  return date.toLocaleDateString('en-IN', { month: 'long', day: 'numeric' });
+}
+
+// ── Sub-Components ──────────────────────────────────────────────────────────
+
+const ActivityItem = ({ title, amount, time, type, isLast }: any) => (
+  <HapticAction style={[styles.minimalActivityItem, isLast && { borderBottomWidth: 0 }]}>
     <View style={styles.activityMain}>
       <Text style={styles.activityTitle}>{title}</Text>
       <Text style={styles.activityTime}>{time}</Text>
@@ -199,6 +314,8 @@ const AnimatedBalance = ({ value }: { value: number }) => {
 
   return <Text style={styles.balanceAmount}>{displayValue}</Text>;
 };
+
+// ── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -282,16 +399,14 @@ const styles = StyleSheet.create({
     color: theme.colors.onSurfaceVariant,
     marginTop: vs(2),
   },
-  alertAction: {
-    paddingHorizontal: s(12),
-    paddingVertical: vs(6),
-    backgroundColor: theme.colors.background,
+  riskBadge: {
+    paddingHorizontal: s(10),
+    paddingVertical: vs(4),
     borderRadius: s(8),
   },
-  alertActionText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: ms(12),
-    color: theme.colors.onSurface,
+  riskBadgeText: {
+    fontFamily: 'Manrope_800ExtraBold',
+    fontSize: ms(13),
   },
   section: {
     marginBottom: vs(32),
@@ -433,5 +548,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: ms(16),
     color: theme.colors.onSurface,
+  },
+  emptyActivity: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: s(24),
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    padding: s(32),
+    alignItems: 'center',
+  },
+  emptyActivityText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: ms(14),
+    color: theme.colors.onSurfaceVariant,
   },
 });

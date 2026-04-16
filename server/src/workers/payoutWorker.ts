@@ -8,7 +8,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const SIM_URL = process.env.SIM_URL || 'http://localhost:4000';
-const RISK_THRESHOLD = 0.65;
+const RISK_THRESHOLD = 0.50;
 
 export const payoutWorker = new Worker(PAYOUT_QUEUE_NAME, async (job: Job) => {
     console.log(`[PayoutWorker] Starting hourly aggregation and payout execution... JobID: ${job.id}`);
@@ -164,8 +164,8 @@ export const payoutWorker = new Worker(PAYOUT_QUEUE_NAME, async (job: Job) => {
             }
         }
         
-        // Step 5: Clean up old low-latency snapshots
-        await client.query(`DELETE FROM zone_risk_snapshots WHERE created_at < NOW() - INTERVAL '1 hour'`);
+        // Step 5: Clean up old low-latency snapshots (retained 24h for manual claim lookups)
+        await client.query(`DELETE FROM zone_risk_snapshots WHERE created_at < NOW() - INTERVAL '24 hours'`);
 
         await client.query('COMMIT');
         console.log(`[PayoutWorker] 1-Hour Aggregation & Payout Routine complete.`);

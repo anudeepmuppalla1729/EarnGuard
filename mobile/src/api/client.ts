@@ -9,6 +9,7 @@ import { SecureStorage, STORAGE_KEYS } from '../services/storage';
 import type {
   Worker, Policy, Claim, WalletTransaction, WalletBalance,
   AppNotification, PolicyQuote, AuthTokens, ApiResponse, ApiQuoteResponse,
+  ManualClaimRequest, DashboardData,
 } from '../types';
 
 import Constants from 'expo-constants';
@@ -223,6 +224,12 @@ export const apiClient = {
      */
     list: (page = 1, limit = 10): Promise<ApiResponse<Claim[]>> =>
       get<ApiResponse<Claim[]>>('/claims', { page, limit }),
+
+    /**
+     * POST /api/v1/claims/manual
+     */
+    submit: (data: ManualClaimRequest): Promise<ApiResponse<Claim>> =>
+      post<ApiResponse<Claim>>('/claims/manual', data),
   },
 
   // ── NOTIFICATIONS ───────────────────────────────────────────
@@ -245,5 +252,15 @@ export const apiClient = {
      */
     markRead: (id: string): Promise<ApiResponse<null>> =>
       put<ApiResponse<null>>(`/notifications/${id}/read`),
+  },
+
+  // ── DASHBOARD ───────────────────────────────────────────────
+
+  dashboard: {
+    /**
+     * GET /api/v1/dashboard
+     */
+    get: (): Promise<ApiResponse<DashboardData>> =>
+      get<ApiResponse<DashboardData>>('/dashboard'),
   },
 };
