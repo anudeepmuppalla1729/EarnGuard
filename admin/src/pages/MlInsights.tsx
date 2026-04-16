@@ -1,6 +1,5 @@
 import { usePolledData, MED_POLL } from '../hooks/useAdminData';
 import { PageHeader } from '../components/common/PageHeader';
-import { format } from 'date-fns';
 
 export function MlInsights() {
   const { data: metrics, timestamp: mt } = usePolledData<any>('/ml/metrics', MED_POLL);
