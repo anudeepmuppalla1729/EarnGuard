@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  /* EarnGuard Sovereign — Light Theme Tokens */
+  --color-bg: #f7f9fb;
+  --color-surface: #f7f9fb;
+  --color-surface-low: #f2f4f6;
+  --color-surface-base: #eceef0;
+  --color-surface-high: #e6e8ea;
+  --color-surface-highest: #e0e3e5;
+  --color-card: #ffffff;
+
+  --color-primary: #3525cd;
+  --color-primary-container: #4f46e5;
+  --color-primary-fixed: #e2dfff;
+  --color-primary-dim: #c3c0ff;
+  --color-on-primary: #ffffff;
+
+  --color-secondary: #00687a;
+  --color-secondary-container: #57dffe;
+  --color-secondary-fixed: #acedff;
+
+  --color-tertiary: #95002b;
+  --color-tertiary-container: #bf0f3c;
+  --color-tertiary-fixed: #ffdadb;
+
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #464555;
+  --color-outline: #777587;
+  --color-outline-variant: #c7c4d8;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+
+  --color-success: #00687a;
+  --color-warning: #95002b;
+}
+
+/* Base */
+html, body { background: var(--color-bg); color: var(--color-on-surface); }
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility classes following the Sovereign design system */
+.card-surface {
+  background: var(--color-card);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(25, 28, 30, 0.04);
+}
+.card-surface:hover {
+  box-shadow: 0 4px 12px rgba(25, 28, 30, 0.06);
+}
+
+.section-bg { background: var(--color-surface-low); }
+.sidebar-bg { background: var(--color-surface-highest); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeIn 0.35s ease-out both; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+.pulse-live { animation: pulse-dot 2s ease-in-out infinite; }
