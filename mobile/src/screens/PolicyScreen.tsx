@@ -473,6 +473,7 @@ const styles = StyleSheet.create({
   },
   editorialHeader: {
     marginBottom: vs(24),
+    marginTop: vs(24),
     paddingHorizontal: s(24),
   },
   pageTitle: {

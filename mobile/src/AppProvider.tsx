@@ -7,7 +7,8 @@ import { useWalletStore } from './store/walletStore';
 import { usePolicyStore } from './store/policyStore';
 import { useClaimsStore } from './store/claimsStore';
 import { useNotificationStore } from './store/notificationStore';
-import { startSimulation, stopSimulation } from './services/simulation';
+import { useDashboardStore } from './store/dashboardStore';
+// import { startSimulation, stopSimulation } from './services/simulation';
 import { startLifecycleListener, stopLifecycleListener } from './services/lifecycle';
 
 interface AppProviderProps {
@@ -42,12 +43,13 @@ export function AppProvider({ children }: AppProviderProps) {
       useClaimsStore.getState().loadWithCache();
       useNotificationStore.getState().loadWithCache();
       useNotificationStore.getState().registerDevice();
+      useDashboardStore.getState().loadWithCache();
 
-      // Start simulation engine
-      startSimulation();
+      // Simulation disabled per user request
+      // startSimulation();
 
       return () => {
-        stopSimulation();
+        // stopSimulation();
       };
     } else {
       // Reset all stores on logout
@@ -55,7 +57,8 @@ export function AppProvider({ children }: AppProviderProps) {
       usePolicyStore.getState().reset();
       useClaimsStore.getState().reset();
       useNotificationStore.getState().reset();
-      stopSimulation();
+      useDashboardStore.getState().reset();
+      // stopSimulation();
     }
   }, [isAuthenticated]);
 

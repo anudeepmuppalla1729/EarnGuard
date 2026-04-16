@@ -57,7 +57,7 @@ export const mockClaims: Claim[] = [
     policyId: 'pol-1a2b3c4d-5e6f-7890-abcd-ef1234567890',
     workerId: mockUser.id,
     payoutAmount: 45.00,
-    riskScore: 0.65,
+    riskScore: 0.50,
     severityMultiplier: 1.0,
     disruptionType: 'HEAVY_RAIN',
     status: 'APPROVED',
@@ -199,6 +199,7 @@ export const DISRUPTION_LABELS: Record<string, string> = {
   'FLOOD': 'Flood',
   'TRAFFIC_CONGESTION': 'Traffic Congestion',
   'PLATFORM_OUTAGE': 'Platform Outage',
+  'MANUAL_CLAIM': 'Manual Claim',
 };
 
 export function getDisruptionLabel(type: string): string {

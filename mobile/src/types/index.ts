@@ -60,6 +60,7 @@ export interface PolicyQuote {
 
 // ── Claim ───────────────────────────────────────────────────────
 export type ClaimStatus = 'APPROVED' | 'REJECTED' | 'PENDING';
+export type ClaimType = 'SYSTEM' | 'MANUAL';
 
 export interface Claim {
   id: string;
@@ -70,7 +71,20 @@ export interface Claim {
   severityMultiplier: number;
   disruptionType: string; // HEAVY_RAIN, SYSTEM_TRIGGER, etc.
   status: ClaimStatus;
+  claimType?: ClaimType;
+  claimNote?: string;
+  rejectionReason?: string;
+  timeframeStart?: string;
+  timeframeEnd?: string;
   createdAt: string;
+}
+
+export interface ManualClaimRequest {
+  disruptionType: string;
+  timeframeStart: string;
+  timeframeEnd: string;
+  note: string;
+  clientRequestId: string;
 }
 
 // ── Wallet ──────────────────────────────────────────────────────
@@ -130,4 +144,48 @@ export interface ApiError {
     message: string;
     requestId?: string;
   };
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────
+export interface DashboardRisk {
+  zoneId: string;
+  zoneName: string;
+  riskScore: number;
+  orderDrop: number;
+  riskLabel: string;
+  updatedAt: string;
+}
+
+export interface DashboardPolicy {
+  id: string;
+  tierName: string;
+  coverageMultiplier: number;
+  premiumAmount: number;
+  activatedAt: string;
+  renewalDate: string;
+}
+
+export interface DashboardZoneInsight {
+  zoneId: string;
+  zoneName: string;
+  riskScore: number;
+  orderDrop: number;
+  updatedAt: string;
+}
+
+export interface DashboardActivity {
+  id: string;
+  amount: number;
+  type: TransactionType;
+  category: TransactionCategory;
+  referenceId?: string;
+  createdAt: string;
+}
+
+export interface DashboardData {
+  todayCredits: number;
+  latestRisk: DashboardRisk | null;
+  policy: DashboardPolicy | null;
+  zoneInsights: DashboardZoneInsight[];
+  recentActivity: DashboardActivity[];
 }
