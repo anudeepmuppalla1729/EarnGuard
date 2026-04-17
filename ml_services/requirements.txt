@@ -7,9 +7,6 @@ joblib
 pydantic
 requests
 numpy
-ipykernel
-seaborn
-matplotlib
 python-dotenv
 google-genai
 httpx
