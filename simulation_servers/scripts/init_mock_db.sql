@@ -91,6 +91,10 @@ INSERT INTO mock_cities (city_id, name) VALUES ('C1', 'Hyderabad');
 -- Safe Zone vs Risky Zone
 INSERT INTO mock_zones (zone_id, city_id, name) VALUES ('Z1', 'C1', 'Madhapur Dark Store (Safe)');
 INSERT INTO mock_zones (zone_id, city_id, name) VALUES ('Z2', 'C1', 'Kondapur Dark Store (Flood Risk)');
+INSERT INTO mock_zones (zone_id, city_id, name) VALUES ('Z3', 'C1', 'Gachibowli Dark Store');
+INSERT INTO mock_zones (zone_id, city_id, name) VALUES ('Z4', 'C1', 'Jubilee Hills Dark Store');
+INSERT INTO mock_zones (zone_id, city_id, name) VALUES ('Z5', 'C1', 'Banjara Hills Dark Store');
+INSERT INTO mock_zones (zone_id, city_id, name) VALUES ('Z6', 'C1', 'Hitec City Dark Store');   
 
 -- Fake Workers (Matching CURATED_DRIVERS)
 INSERT INTO platform_workers (platform_worker_id, zone_id, city_id, platform, name, mobile, vehicle, rating)

@@ -1,0 +1,34 @@
+# Docker ignore file for ML Services
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+bin/
+lib/
+include/
+pip-selfcheck.json
+
+# Git
+.git
+.gitignore
+
+# Data and Notebooks (assuming models are pre-trained)
+**/*.ipynb
+data/raw/
+data/processed/*.csv
+!data/processed/final_dataset.csv # Keep final dataset if needed for runtime logic, though better to use pre-loaded state
+
+# Environment variables
+.env
+
+# Tests
+tests/
+test_*.py
+
+# Metadata
+.vscode
+.idea
+.gemini

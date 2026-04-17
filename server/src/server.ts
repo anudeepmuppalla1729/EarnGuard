@@ -12,7 +12,7 @@ import './workers/mlPricingWorker'; // Start ML sync listener
 
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 const startServer = async () => {
     try {
