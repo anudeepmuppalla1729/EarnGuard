@@ -40,15 +40,15 @@ The core of our dynamic risk modeling revolves around splitting metropolitan are
 
 ### **`workers`**
 *   **Purpose**: App users (Delivery agents). Contains Authentication parameters.
-*   **Fields**: `id`, `email`, `password_hash`, `name`, `platform` (ZEPTO, BLINKIT).
-*   **Relations**: Belongs to exactly 1 `zone`.
+*   **Fields**: `id`, `email`, `password_hash`, `name` (Full Name), `platform` (ZEPTO, BLINKIT).
+*   **Relations**: Belongs to exactly 1 `zone`. Identity is used for Simulation income lookups.
 
 ### **`policies`**
 *   **Purpose**: The insurance document binding the worker to security criteria atomically.
 *   **Fields**: 
     *   `status`: Transitions from `DRAFT` ➔ `ACTIVE` ➔ `EXPIRED`.
-    *   `premium_amount`: The sum of the `base_price` and `weekly_additional_price` at the exact moment of DRAFTing.
-    *   `max_payout`: A mathematically constrained ceiling limit organically locking payout amounts.
+    *   `premium_amount`: The sum of the `base_price` and `weekly_additional_price` at the exact moment of activation.
+    *   `coverage_multiplier`: The multiplier `k` used for interval loss calculations.
 *   **Relations**: Tied permanently to a `worker_id` and the `city_id`.
 
 ### **`zone_risk_snapshots`**
@@ -71,8 +71,13 @@ The core of our dynamic risk modeling revolves around splitting metropolitan are
 *   **Relations**: Maps to `workers(id)`.
 
 ### **`claims`**
-*   **Purpose**: Records physical disruption interventions approved by the engine organically.
-*   **Fields**: `payout_amount`, `risk_score`, `disruption_type`, `status` (PENDING, APPROVED).
+*   **Purpose**: Records physical disruption interventions approved by the engine or submitted manually.
+*   **Fields**: 
+    *   `payout_amount`, `risk_score`, `disruption_type`, `status` (PENDING, APPROVED, REJECTED).
+    *   `claim_type`: `AUTO` or `MANUAL`.
+    *   `las_score`: Location Authenticity Score (0.0 - 1.0) for manual fraud detection.
+    *   `claim_timeframe_start/end`: ISO timestamps for the claimed interval.
+    *   `client_request_id`: Idempotency key for mobile submissions.
 *   **Relations**: Tied to `policies` and `workers`.
 
 ### **`outbox_events`**

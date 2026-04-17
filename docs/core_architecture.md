@@ -25,16 +25,23 @@ The core backend is built on **Node.js** using **Express.js**, with **PostgreSQL
 EarnGuard uses an "Autonomous Insurance" model where state transitions (like claim payouts) are triggered by background environmental monitoring rather than manual user input.
 
 ### 1. Disruption Detection Worker (`disruptionWorker.ts`)
-The heartbeat of the system.
-- **Interval**: Runs every 1 hour (configurable via cron).
+The sensing heartbeat of the system.
+- **Interval**: Runs every **3 minutes** (standard) or **1 minute** (rapid test).
 - **Process**:
-    1.  **Sensing**: Polls the **Mock Simulator** for live weather, news, and platform activity in target zones.
-    2.  **Risk Analysis**: Computes a hybrid risk score (0.0 - 1.0) based on headline sentiment (heuristic/LLM) and environmental triggers (heavy rain, delivery delays).
-    3.  **Trigger**: If risk exceeds `0.65`, a disruption is confirmed for that zone.
-    4.  **Action**: Automatically calculates payouts for all active policies in the zone and prepares claim records.
+    1.  **Sensing**: Polls the **Mock Simulator** for live weather, news, traffic, and platform order drops.
+    2.  **Prolog Evaluation**: Headlines are parsed through an embedded **Tau-Prolog** engine to extract structural risk values.
+    3.  **Snapshotting**: Logs a raw `risk_score` and `order_drop_percentage` into the `zone_risk_snapshots` table for the specific zone.
+    4.  **No Payout**: This worker *only* senses and logs; it does not issue money.
 
-### 2. ML Pricing Sync Worker (`mlPricingWorker.ts`)
-Ensures the backend pricing data is always competitive and accurate.
+### 2. Payout Execution Worker (`payoutWorker.ts`)
+The financial logic engine.
+- **Interval**: Runs every **1 hour** (Production) or **10 minutes** (Demo Mode).
+- **Process**:
+    1.  **Aggregation**: Computes the `AVG(risk_score)` and `MAX(order_drop_percentage)` from the last hour (or 10 mins) of snapshots.
+    2.  **Validation**: Verifies if the smoothed risk exceeds the `0.50` threshold.
+    3.  **Individualized Calculation**: Fetches specific worker income rates from the Simulator for that hour.
+    4.  **Action**: Issues payouts using the formula: `Payout = (k * Loss) + (Remaining Loss * RiskScore)`.
+    5.  **Pending State**: If the risk is high but platform drops are 0, claims are marked as **PENDING** for manual audit. always competitive and accurate.
 - **Schedules**:
     - **Monthly**: Triggers the `/api/v1/predict/monthly` ML endpoint to compute the base insurance premium for each city based on historical delivery trends.
     - **Weekly**: Triggers the `/calculate-weekly-price` ML endpoint to compute "risk-adjusted" add-ons based on short-term weather/news forecasts.
