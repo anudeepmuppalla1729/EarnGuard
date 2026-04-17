@@ -1,0 +1,36 @@
+# Stage 1: Build the TypeScript code
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install ALL dependencies (including devDependencies needed for tsc)
+COPY package*.json ./
+RUN npm ci
+
+# Copy the source code and build
+COPY . .
+# Run the TypeScript compiler to output to the "dist" folder
+RUN npx tsc
+
+
+# Stage 2: Production environment
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install ONLY production dependencies and network tools
+RUN apk add --no-cache netcat-openbsd
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# Copy only the compiled output from the builder stage
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 3000
+
+ENV REDIS_HOST=redis
+ENV REDIS_PORT=6379
+ENV PORT=3000
+
+# Wait for redis and then run the compiled javascript file
+CMD ["sh", "-c", "until nc -z $REDIS_HOST $REDIS_PORT; do echo 'Waiting for Redis...'; sleep 2; done; node dist/server.js"]
