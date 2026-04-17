@@ -1,0 +1,12 @@
+{
+  "build": {
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SERVER_URL": "https://earnguard-server-production.up.railway.app"
+      }
+    }
+  }
+}
