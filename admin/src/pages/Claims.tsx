@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { apiClient } from '../api/client';
 import { format } from 'date-fns';
 
-const STATUS_COLORS: Record<string, string> = { APPROVED: '#00687a', REJECTED: '#95002b', PENDING: '#D97706' };
+const STATUS_COLORS: Record<string, string> = { APPROVED: '#10B981', REJECTED: '#95002b', PENDING: '#D97706' };
 
 export function Claims() {
   const { data: summary, timestamp: st } = usePolledData<any>('/claims/summary', MED_POLL);
@@ -61,19 +61,30 @@ export function Claims() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pie */}
-        <div className="card-surface p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--color-outline)' }}>Decision Distribution</p>
-          <div className="h-48">
-            {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
-                    {pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: 'var(--color-card)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(25,28,30,0.08)', border: 'none', fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : <p className="flex items-center justify-center h-full text-sm" style={{ color: 'var(--color-outline)' }}>No claim data</p>}
+        <div className="card-surface p-5 translate-z-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider mb-6" style={{ color: 'var(--color-outline)' }}>Decision Distribution</p>
+          <div className="flex flex-col gap-6">
+            <div className="h-48 relative">
+              {pieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
+                      {pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: 'var(--color-card)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(25,28,30,0.08)', border: 'none', fontSize: '12px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : <p className="flex items-center justify-center h-full text-sm" style={{ color: 'var(--color-outline)' }}>No claim data</p>}
+            </div>
+            
+            <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center pt-2">
+              {pieData.map((d, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ background: d.fill }} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-on-surface-variant)' }}>{d.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

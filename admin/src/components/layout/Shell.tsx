@@ -32,10 +32,10 @@ export function Shell() {
           <h1 className="text-xl font-bold tracking-tight mb-0.5" style={{ color: 'var(--color-primary)' }}>
             EarnGuard AI
           </h1>
-          <p className="text-[9px] font-bold tracking-[0.2em] opacity-40 uppercase">Core Engine V4.2</p>
+          <p className="text-[9px] font-bold tracking-[0.2em] opacity-40 uppercase">Core Engine V1.0</p>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-1">
+        <nav className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-1">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/'}
               className={({ isActive }) =>
@@ -53,22 +53,10 @@ export function Shell() {
           ))}
         </nav>
 
-        <div className="p-4 space-y-2">
-          <div className="pt-2 opacity-60">
-            <p className="px-4 py-1 text-[10px] font-bold tracking-widest uppercase mb-2">Support & Docs</p>
-          </div>
-          
-          <div className="pt-4 border-t border-black/5 opacity-60">
-            <button className="flex items-center gap-3 px-4 py-2 w-full text-[12px] font-medium hover:text-black transition-colors">
-              <FileText size={14} /> Documentation
-            </button>
-            <button className="flex items-center gap-3 px-4 py-2 w-full text-[12px] font-medium hover:text-black transition-colors">
-              <HelpCircle size={14} /> Support
-            </button>
-            <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2 w-full text-[12px] font-medium hover:text-red-600 transition-colors">
-              <LogOut size={14} /> Logout
-            </button>
-          </div>
+        <div className="p-4 border-t border-black/5">
+          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2 w-full text-[12px] font-medium text-black/50 hover:text-red-600 transition-colors">
+            <LogOut size={14} /> Logout
+          </button>
         </div>
       </aside>
 

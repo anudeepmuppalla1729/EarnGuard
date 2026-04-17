@@ -206,9 +206,9 @@ export function Overview() {
             <div className="grid grid-cols-4 gap-4 mb-8">
               {[
                 { label: 'Pending', count: pipeline?.PENDING || 0, color: '#94A3B8' },
-                { label: 'Approved', count: pipeline?.APPROVED || 0, color: '#3B82F6' },
-                { label: 'Payout Sent', count: pipeline?.PAID || 0, color: '#10B981' },
-                { label: 'Rejected', count: pipeline?.REJECTED || 0, color: '#EF4444' }
+                { label: 'Approved', count: pipeline?.APPROVED || 0, color: '#10B981' },
+                { label: 'Payout Sent', count: pipeline?.PAID || 0, color: '#00687a' },
+                { label: 'Rejected', count: pipeline?.REJECTED || 0, color: '#BA1A1A' }
               ].map(p => (
                 <div key={p.label} className="p-4 rounded-2xl bg-black/[0.02] border border-black/5">
                   <p className="text-[9px] font-bold tracking-widest uppercase opacity-40 mb-1">{p.label}</p>
