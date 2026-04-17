@@ -503,19 +503,18 @@ Any rejected claim can be appealed via a simple in-app flow. The worker submits 
 
 ### 9.4 Ring Detection — Coordinated Fraud at Scale
 
-Individual worker-level detection catches isolated spoofers. Defeating a coordinated ring of 500 requires a population-level view.
+Individual worker-level detection catches isolated spoofers. Coordinated rings are detected via population-level "Burst Monitoring."
 
-**The Ring Detection Pipeline (runs every 15 minutes during active disruption events):**
+**The Burst Detection Pipeline (Real-time):**
 
-1. **Claim burst monitor** — if claim arrivals from a single zone exceed 3× the historical baseline within a 10-minute window, an alert is raised to the admin portal automatically.
+1. **Zone Density Monitor**: The system continuously monitors the volume of manual claims arriving from a single zone.
+2. **Burst Trigger**: If >3 manual claims are filed in the same zone within a **30-minute window**, a `ringFlag` is raised for all claims in that cluster.
+3. **LAS Penalty**: Flagged claims receive a significant penalty to their **Location Authenticity Score (-0.40)**, which triggers a "HOLD & VERIFY" state or immediate rejection.
 
-2. **Co-claim graph analysis** — communities of workers who consistently file together, identified via Louvain clustering on the co-claim graph, are flagged as probable rings when their aggregate anomaly score is above threshold.
-
-3. **Mass hold trigger** — when a probable ring is detected, all pending claims from that cluster move to HOLD simultaneously. Workers who pass the one-tap verification are released to payout; others are escalated to manual review.
-
-4. **Ring evidence package** — the admin portal auto-generates an evidence report for the flagged cluster: member list, claim timestamps, LAS scores, co-claim graph visualisation, and device/UPI overlap. Designed for internal remediation and, if needed, handoff to the platform partner.
-
-5. **Model feedback loop** — confirmed ring fraud events are fed back into the Isolation Forest retraining pipeline, continuously sharpening anomaly detection against evolving tactics.
+**Future Roadmap (Phase 2):**
+* **Co-claim Graph Analysis**: Using Louvain clustering to identify workers who consistently file claims together across different disruption events.
+* **Mass Hold & Verification**: Automated push notifications requiring a one-tap GPS check-in to release held ring-payouts.
+* **Evidence Reporting**: Auto-generation of fraud cluster reports for platform partners (Zepto/Blinkit).
 
 ---
 
