@@ -128,19 +128,19 @@ Worker opens EarnGuard app
         │
         ▼
 4. CLAIM PROCESSING & FRAUD DETECTION
-   ├── Duplicate claim check
-   ├── Multiagent validation (Platform API + Weather API + logs)
-   ├── ML anomaly detector scores the claim
-   ├── Valid → payout scheduled
-   └── Invalid → rejected, worker notified
+   ├── Idempotency check (Duplicate & Client Request ID)
+   ├── Parametric verification (Matching zone risk snapshots)
+   ├── Location Authenticity (LAS) Scoring (Check-in + Zone Drops)
+   ├── Approved → payout scheduled
+   └── Flagged/Invalid → held for review or rejected
         │
         ▼
 5. PAYOUT
-   ├── Interval loss calculated: zone median income rate × disruption hours × risk %
-   ├── Each qualifying interval generates its own payout amount
+   ├── Interval loss calculated: individualized hourly rate × duration
+   ├── Payout = (k × Interval Loss) + (Remaining Loss × Risk %)
    ├── Payouts accumulated in EarnGuard in-app wallet
    ├── Worker withdraws on-demand
-   └── Processed via Stripe sandbox / UPI mock
+   └── Processed via UPI mock
 ```
 
 ---
@@ -450,12 +450,11 @@ The anti-spoofing module computes a **Location Authenticity Score (LAS)** from 0
 **Behavioral and historical signals (ML-derived):**
 - **Claim timing clustering** — if a worker's claim is filed within a tight time window shared by many other workers from the same zone, this is a coordinated fraud indicator. Genuine disruptions produce a spread of claim times; rings file in bursts.
 - **Claim frequency spike** — a sudden jump in claim frequency for a worker with no prior claims, or a worker whose frequency is far above their historical baseline, is flagged for elevated scrutiny.
-- **Historical consistency** — the Isolation Forest model (Layer 3) is trained on each worker's own history. A claim pattern that is anomalous relative to that worker's personal baseline scores higher for fraud risk.
+- **Historical consistency** — The system cross-references the current claim against the worker's historical approved frequency. A sudden, massive jump in claim activity relative to their personal baseline scores higher for manual review.
 
 **Population-level signals (ring detection):**
-- **Simultaneous claim spike detection** — the system monitors new claims per zone per 10-minute window. If the arrival rate exceeds 3× the historical baseline for that zone, a ring alert fires to the admin portal.
-- **Co-claim graph clustering** — a graph is built where each node is a worker and edges connect workers who filed claims in the same zone within the same 30-minute window, across all historical events. Tightly connected communities (detected using the Louvain method) with elevated anomaly scores are flagged as probable rings. This runs as a batch job every 15 minutes during active disruption events.
-- **Device ID / UPI account overlap** — multiple claims linked to the same device ID or UPI payout handle are flagged as duplicate ring accounts immediately.
+- **Simultaneous claim spike detection** — The system monitors new claims per zone per 30-minute window. If the volume exceeds historical baselines, a burst-alert is flagged for all workers in that cluster.
+- **Device ID / UPI account overlap** — Multiple claims linked to the same device ID or UPI payout handle are flagged as duplicate ring accounts immediately.
 
 ---
 
