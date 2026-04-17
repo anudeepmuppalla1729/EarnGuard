@@ -405,7 +405,7 @@ For a deeper dive into the internal workings of each component, please refer to 
 
 - **Zero-touch claims** — parametric triggers mean workers never need to file a claim for covered events
 - **Hyper-local risk pricing** — premium recalculated weekly per zone, not per city or annually
-- **Three-layer fraud detection** — duplicate check + multiagent validation + ML anomaly scoring
+- **Three-layer fraud detection** — idempotency + parametric verification + Location Authenticity Scoring (LAS)
 - **Mobile-first for workers** — React Native app with UPI integration and offline support, designed for on-the-road use
 - **Income-cycle aligned** — weekly premium matches gig worker earning and spending patterns exactly
 - **Interval-accurate payouts** — workers are compensated for the exact hours lost during a disruption, not a rough weekly percentage
@@ -414,47 +414,41 @@ For a deeper dive into the internal workings of each component, please refer to 
 
 ## 10. Adversarial Defense & Anti-Spoofing Strategy
 
-> 🚨 **Threat Scenario:** A coordinated ring of 500+ delivery workers uses GPS-spoofing applications to fake their location inside a severe weather zone while they are safely at home — triggering mass parametric payouts and draining the liquidity pool.
+> 🚨 **Threat Scenario:** A coordinated ring of delivery workers fakes their location inside a severe weather zone while safely at home — triggering mass parametric payouts and draining the liquidity pool.
 
-EarnGuard's existing three-layer fraud detection catches individual anomalies. This section documents the **fourth defensive layer** — a dedicated anti-spoofing module designed specifically to defeat coordinated, GPS-based fraud rings.
+EarnGuard addresses this through its **Location Authenticity Score (LAS)** — a heuristic scoring engine integrated directly into the claim processing pipeline (Layer 3). It cross-validates claims against real-time platform and zone-level signals.
 
 ---
 
 ### 9.1 The Differentiation — Genuine Stranding vs. GPS Spoofing
 
-The fundamental insight is that **a spoofed GPS signal is just one data point**. A genuinely stranded delivery partner produces a rich, correlated behavioral fingerprint that a bad actor at home cannot fully replicate. EarnGuard's anti-spoofing layer cross-validates GPS against a portfolio of independent, realistic signals to detect this mismatch.
+The fundamental insight is that **a spoofed GPS signal is just one data point**. A genuinely stranded delivery partner produces a correlated behavioral fingerprint that a bad actor cannot replicate. The LAS engine cross-validates claims against independent, real-time signals.
 
-| Signal Layer | Genuine Stranded Worker | GPS Spoofer at Home |
-|---|---|---|
-| **Platform order activity** | Order acceptance drops to zero — platform confirms no orders dispatched to zone | May still show order activity, or drops suspiciously in sync with all ring members |
-| **Dark store check-in status** | Platform API confirms worker checked in before disruption started | No active check-in record for that shift |
-| **Last active delivery timestamp** | Completed a delivery immediately before disruption — confirms zone presence | Last delivery hours earlier — zone presence unverified |
-| **Accelerometer / motion** | Stationary shelter pattern, short movement bursts consistent with outdoor waiting | Calm indoor pattern inconsistent with being stranded in a storm |
-| **Claim timing & history** | Normal claim frequency; history consistent with zone and schedule | Claim filed in tight cluster with ring members; sudden frequency spike |
-| **Device ID / UPI handle** | Unique device + payout account | May share device ID or UPI handle with other ring members |
+| Signal Layer | Genuine Stranded Worker | GPS Spoofer at Home | Implemented? |
+|---|---|---|---|
+| **Platform online status** | Worker is marked `is_online` by the platform dark store | Not checked in or offline | ✅ Yes |
+| **Zone order drop %** | Order volume dropped >30% in the worker's zone | Orders flowing normally — no disruption confirmed | ✅ Yes |
+| **Zone claim density** | Normal claim frequency for the zone | >3 claims from same zone in 30 mins — burst detected | ✅ Yes |
+| **Claim cooldown** | Normal claim history | >5 approved claims in 24 hours — rate-limited | ✅ Yes |
 
-The anti-spoofing module computes a **Location Authenticity Score (LAS)** from 0 to 1 by fusing all of the above signals. A GPS coordinate alone contributes only a partial weight to this score.
+The LAS engine computes a **Location Authenticity Score (LAS)** from 0 to 1 by combining these signals. Each signal contributes a weighted score component.
 
 ---
 
-### 9.2 The Data — Specific Signals Beyond Basic GPS
+### 9.2 LAS Scoring — How It Works in Code
 
-**Platform-side signals (via Platform API — gold standard):**
-- **Order dispatch log** — the platform API records whether orders were dispatched to the worker's zone during the claimed interval. A real disruption drives zone order volume to near-zero. If orders were being dispatched and accepted by others in the same zone while the worker claims disruption, the claim is weakened.
-- **Dark store check-in / check-out timestamps** — platforms log when workers check in and out of their assigned dark store. A valid disruption claim must show the worker was checked in before the disruption started.
-- **Last-confirmed active delivery timestamp** — if the worker completed a delivery seconds before the disruption, physical zone presence is confirmed. If the last delivery was hours prior, presence is unverified.
+The `computeLocationAuthenticityScore()` function in `manualClaimService.ts` builds the LAS from three independent checks:
 
-**Device-level signals (from EarnGuard mobile app):**
-- **Accelerometer / motion patterns** — delivery partners sheltering during a storm show distinct motion signatures: stationary periods, short bursts, vibration consistent with an outdoor environment. A person sitting comfortably at home produces a markedly different, calmer indoor motion profile. This signal is used as a supporting indicator, not a sole determinant.
+**1. Platform Active Check-in (is_online) — +0.25**
+The system queries the Simulation Server for the worker's real-time status. If the worker is marked `is_online` by their platform dark store, the score increases by 0.25.
 
-**Behavioral and historical signals (ML-derived):**
-- **Claim timing clustering** — if a worker's claim is filed within a tight time window shared by many other workers from the same zone, this is a coordinated fraud indicator. Genuine disruptions produce a spread of claim times; rings file in bursts.
-- **Claim frequency spike** — a sudden jump in claim frequency for a worker with no prior claims, or a worker whose frequency is far above their historical baseline, is flagged for elevated scrutiny.
-- **Historical consistency** — The system cross-references the current claim against the worker's historical approved frequency. A sudden, massive jump in claim activity relative to their personal baseline scores higher for manual review.
+**2. Zone Order Drop Severity (>30%) — +0.25**
+The system queries the platform's order drop percentage for the worker's zone. If orders have dropped by more than 30%, this confirms a genuine disruption and the score increases by 0.25.
 
-**Population-level signals (ring detection):**
-- **Simultaneous claim spike detection** — The system monitors new claims per zone per 30-minute window. If the volume exceeds historical baselines, a burst-alert is flagged for all workers in that cluster.
-- **Device ID / UPI account overlap** — Multiple claims linked to the same device ID or UPI payout handle are flagged as duplicate ring accounts immediately.
+**3. Ring Detection (Zone Claim Density) — -0.40 penalty**
+The system counts how many manual claims were filed in the exact same zone within the last 30 minutes. If >3 claims exist, a `ringFlag` is raised and the score is penalized by 0.40, effectively pushing the claim into HOLD or REJECT territory.
+
+> **Base Score**: Every claim starts at 0.50. The maximum achievable LAS is 1.00 (0.50 + 0.25 + 0.25). A ring-flagged claim drops to as low as 0.10.
 
 ---
 
@@ -462,41 +456,21 @@ The anti-spoofing module computes a **Location Authenticity Score (LAS)** from 0
 
 The most dangerous failure in fraud detection is over-triggering false positives — penalising a genuine worker at the worst moment of their week. EarnGuard's flagging workflow is deliberately tiered to avoid this.
 
-#### Flagging Tiers
+#### Flagging Tiers (Implemented)
 
 ```
 LAS Score         │ System Action
 ──────────────────┼─────────────────────────────────────────────────────────
-0.85 – 1.00       │ AUTO-APPROVED  — Payout proceeds normally
+0.85 – 1.00       │ AUTO-APPROVED  — Payout proceeds normally.
 0.60 – 0.84       │ SOFT-FLAG      — Payout proceeds; claim tagged for 
-                  │    asynchronous review within 24 hrs. Worker not notified.
-0.35 – 0.59       │ HOLD & VERIFY  — Payout paused. Worker sent a 
-                  │    one-tap verification request (see below).
-0.00 – 0.34       │ HARD-REJECT    — Claim denied. Worker notified with 
-                  │    a plain-language explanation and the option to appeal.
+                  │    asynchronous admin review. Worker not notified.
+0.35 – 0.59       │ HOLD & VERIFY  — Claim status set to PENDING.
+                  │    Requires manual admin approval.
+0.00 – 0.34       │ HARD-REJECT    — Claim denied immediately.
+                  │    Worker notified of rejection.
 ```
 
-#### The One-Tap Verification Request (for HOLD & VERIFY tier)
-
-When a claim is held, EarnGuard sends the worker a single push notification:
-
-> *"We noticed something unusual during your coverage interval. To confirm your payout of Rs. X, please tap below and share your approximate location for 30 seconds."*
-
-This does **not** ask the worker to call anyone, upload documents, or navigate a claims portal. It requests a brief live check that cross-validates against platform check-in data and motion patterns. The result is processed immediately and the payout is either released or escalated to human review.
-
-Workers have **4 hours** to respond before the claim times out — fully accounting for a genuine worker sheltering with degraded connectivity during the disruption.
-
-#### Network Drop Handling
-
-Bad weather inherently degrades mobile connectivity. EarnGuard handles this explicitly:
-
-- If the worker was confirmed in the disrupted zone before the network drop (via dark store check-in and last delivery timestamp), that pre-drop evidence is carried forward to support the claim.
-- A connectivity gap during a confirmed disruption interval does **not** itself trigger a flag — it is expected behavior. Only a connectivity gap combined with other anomalies (unusual motion pattern, platform order activity continuing, no check-in record) raises the flag.
-- Workers who time out on the verification request due to genuine network issues are automatically escalated to a **human review queue** — not auto-rejected. A human reviewer in the admin portal examines the full evidence trace and can approve the claim manually within 24 hours.
-
-#### Appeals
-
-Any rejected claim can be appealed via a simple in-app flow. The worker submits one piece of supporting evidence (a photo, platform app screenshot, or brief text explanation). Appeals are reviewed by the ops team within 48 hours and approved claims are paid out with no penalty to the worker's account history.
+> **Note:** PENDING claims are visible to admins in the Admin Dashboard and can be manually approved or rejected after review.
 
 ---
 
@@ -543,7 +517,7 @@ Claim arrives (auto-trigger or manual)
         └────────────────────────────────────┘
 ```
 
-> **Design principle:** The anti-spoofing layer is additive — it does not replace or short-circuit the three existing fraud layers. Every claim still passes all four layers. The LAS score is one input to the final decision, not the sole determinant. This prevents the new layer from becoming a single point of failure or over-penalising genuine workers.
+> **Design principle:** The LAS scoring is integrated directly into the three-layer claim processing pipeline. Every manual claim passes through all three layers sequentially. The LAS score determines the final tier (Auto-approve, Soft-flag, Hold, or Reject), ensuring no single signal can over-penalise genuine workers.
 
 ---
 
