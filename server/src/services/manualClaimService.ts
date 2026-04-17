@@ -362,7 +362,7 @@ export async function processManualClaim(input: ManualClaimInput): Promise<Claim
     }
 
     const intervalLoss = incomeRate * durationHours;
-    const baseCoverage = parseFloat(worker.coverage_multiplier) * parseFloat(worker.premium_amount);
+    const baseCoverage = parseFloat(worker.coverage_multiplier) * intervalLoss;
     const remainingLoss = Math.max(0, intervalLoss - baseCoverage);
     const riskAdjusted = remainingLoss * weightedRiskScore;
     const payout = baseCoverage + riskAdjusted;

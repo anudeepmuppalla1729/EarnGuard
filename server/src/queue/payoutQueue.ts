@@ -14,15 +14,15 @@ export const scheduleHourlyPayouts = async () => {
         await payoutQueue.removeRepeatableByKey(job.key);
     }
     
-    // Add job running every 1 hour
+    // Add job running every 10 minutes
     await payoutQueue.add(
-        'hourly-aggregation',
+        'ten-minute-aggregation',
         { trigger: 'cron' },
         {
             repeat: {
-                pattern: '0 * * * *', // every 1 hour on the hour
+                pattern: '*/10 * * * *', // every 10 minutes
             }
         }
     );
-    console.log('BullMQ: Scheduled Hourly Payout cron (every 1 hour)');
+    console.log('BullMQ: Scheduled 10-Minute Payout cron (Demo Mode)');
 };
