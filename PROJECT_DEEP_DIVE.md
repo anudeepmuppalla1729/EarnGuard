@@ -11,22 +11,31 @@ The system operates as a distributed mesh of Node.js services, Python ML models,
 ---
 
 ## 2. The Core Problem: The "Income Gap"
-Gig workers are the backbone of India's urban logistics, yet they are the most vulnerable to external shocks.
-- **Uninsured Downtime**: Heavy rain, traffic gridlock, or platform outages can lose a worker 20-40% of their daily target.
-- **The Speed Gap**: Traditional insurance takes weeks to verify a claim. A delivery partner needs that money within hours to cover fuel and food costs.
-- **The Verification Gap**: Proving "I couldn't work because of the storm" is subjective and often rejected by traditional insurers.
+India has over **2 million quick-commerce delivery partners** (Zepto, Blinkit). Operating on 10-minute windows, they are uniquely vulnerable to external shocks. A single disrupted interval can wipe out several hours of income with no recourse.
+
+### 2.1 Coverage Constraints & Golden Rules
+To maintain fiscal sustainability, EarnGuard operates under four "Golden Rules":
+1.  **Income Loss Only**: No coverage for vehicle repairs, health, or accidents.
+2.  **Q-Commerce Scope**: Exclusively serves Zepto and Blinkit partners due to their fixed dark-store zone model.
+3.  **Weekly Alignment**: Premiums and coverage are bound to the weekly gig-earning cycle.
+4.  **Verifiable Triggers**: No self-reported loss is paid without independent validation from at least two data sources.
 
 ---
 
 ## 3. The EarnGuard Solution: Parametric Insurance
 EarnGuard moves the burden of proof from the worker to the **data**. 
 
-### What is Parametric Insurance?
-Instead of indemnifying against a specific loss after a long investigation, parametric insurance pays out a pre-defined amount when a **measurable parameter** (e.g., Rainfall > 50mm, or Platform Order Drops > 40%) is exceeded.
+### 3.1 End-to-End Application Workflow
+The system follows a rigid 5-stage lifecycle for every policyholder:
+1.  **Onboarding**: Worker links their platform account; dark store zone is auto-assigned via geofencing.
+2.  **Risk Assessment**: ML pipeline computes the upcoming week's risk and premium every Sunday.
+3.  **Monitoring**: The sensing heartbeat (3-min) scans for environmental or platform triggers.
+4.  **Processing**: Idempotency, Parametric checks, and LAS scoring evaluate the event.
+5.  **Payout**: Funds are credited to the in-app wallet for immediate UPI withdrawal.
 
-### The EarnGuard Advantage:
+### 3.2 The EarnGuard Advantage
 - **Zero-Touch**: No forms, no phone calls, no wait times.
-- **Hyper-Local**: Pricing and triggers are calculated at the **Dark Store Zone** level, ensuring Ravi in Gachibowli isn't penalized for a storm happening in Banjara Hills.
+- **Hyper-Local**: Risk and pricing are managed at the **Dark Store Zone** level.
 - **AI-Powered**: Every premium is dynamically priced based on predictive risk models.
 
 ---
@@ -65,6 +74,33 @@ disruption_risk(strike, 0.95).
 evaluate_risk(Event, Score) :- disruption_risk(Event, Score).
 ```
 This ensures that "Severe Flooding" always triggers a higher risk than "Rain Expected," moving away from fragile regex-based parsing.
+
+### 5.3 Payout & Premium Mathematics
+Transparency is the foundation of trust in parametric insurance. EarnGuard uses the following open formulas:
+
+**Total Weekly Premium Formula:**
+`Premium = City_Base_Price (XGBoost) + Weekly_Risk_Addon (Gemini)`
+
+**Interval Payout Formula:**
+`Payout = (k * Interval_Loss) + (Remaining_Loss * Risk_Score)`
+*   *Interval Loss*: Worker's personalized hourly rate × Duration.
+*   *k*: Fixed coverage multiplier (0.2 - 0.6).
+*   *Risk Score*: The 0-1 intensity of the disruption.
+
+---
+
+## 6. Fraud Defense: The LAS Heuristic & "Tough" Validation
+To protect the capital pool, EarnGuard implements a rigorous validation sequence.
+
+### 6.1 The Manual Claim Pipeline
+Every manual submission undergoes a "Tough Validation" process:
+1.  **Idempotency Lock**: Prevents duplicate submissions via `client_request_id`.
+2.  **Velocity Protection**: Strict cooldown of max **5 claims per 24 hours**.
+3.  **Parametric Cross-Correlation**: The claim is rejected instantly if no `zone_risk_snapshots` match the submitted timeframe.
+4.  **LAS Scoring**: A heuristic score (0-1) correlating online status, platform drops, and ring detection.
+
+### 6.2 Ring Detection & Coordinated Fraud
+Coordinated rings are detected via **Population-Level Burst Monitoring**. If >3 manual claims arrive from a single zone within 30 minutes, a `ringFlag` is raised, penalizing all claims in that cluster by -0.40 on their LAS score, effectively halting the payout for manual review.
 
 ---
 
