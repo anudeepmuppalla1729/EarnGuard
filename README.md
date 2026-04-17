@@ -319,17 +319,14 @@ The admin web portal exposes ML outputs to the insurer team:
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Mobile app (worker) | React Native (Android + iOS) | EarnGuard worker app |
-| Admin web portal | React + Vite, TailwindCSS | Insurer / ops dashboard |
-| Backend API | Node.js / Express | Business logic, orchestration, REST API |
-| ML / Logic services | Python (FastAPI), scikit-learn, XGBoost, Google Gemini, Tau-Prolog | Base price prediction, LLM risk assessment, Prolog structural NLP risk |
-| Database | PostgreSQL (structured data), Redis (caching / queues) | Worker profiles, claims, premiums, zone events |
-| External APIs | OpenWeatherMap / IMD (mock), NewsAPI (mock), Platform API (mock) | Weather, news, platform signal ingestion |
-| Payment | Stripe sandbox / Razorpay mock | Payout processing, UPI integration |
-| Notifications | Firebase Cloud Messaging (FCM) | Push notifications on mobile for disruption alerts and payout confirmations |
-| Deployment | Expo (mobile build), Vercel (admin portal), Railway (backend + ML + Redis) | Fully hosted production environment |
-| Monitoring | Admin Dashboard (visibility-aware polling) | Real-time system health & risk monitoring |
-| Version control | GitHub (monorepo) | Source code + documentation |
+| **Mobile App** | React Native (Expo SDK 54), Zustand, Lucide Native | Multi-platform worker app with offline-first state management |
+| **Admin Dashboard** | React 19, Vite, Tailwind CSS 4.0, Recharts | Real-time insurer dashboard with data visualization |
+| **Backend API** | Node.js (TypeScript), Express, Zod, JWT | Orchestration layer with strict schema validation and security |
+| **Disruption Engine** | BullMQ, Redis, Tau-Prolog | High-throughput sensing and logical event evaluation |
+| **ML Services** | Python (FastAPI), XGBoost, Google Gemini 2.5 Flash | Dynamic pricing models and unstructured risk reasoning |
+| **Database** | PostgreSQL (Supabase), Redis (Railway Managed) | Reliable persistence and high-speed task queuing |
+| **Infrastructure** | Docker, GitHub Actions, Railway | Automated CI/CD and globally distributed container hosting |
+| **Integrations** | Axios, Firebase Cloud Messaging (FCM) | API communication and real-time push notifications |
 
 ---
 
