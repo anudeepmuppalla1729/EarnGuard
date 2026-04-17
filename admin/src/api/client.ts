@@ -1,9 +1,10 @@
 import axios from 'axios';
 
-export const apiClient = axios.create({
-  baseURL: 'http://localhost:3000/api/v1/admin', // Assuming server runs on 3000 locally
-});
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
+export const apiClient = axios.create({
+  baseURL: `${SERVER_URL}/api/v1/admin`,
+});
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('adminToken');
   if (token) {

@@ -1,4 +1,4 @@
-import { usePolledData } from '../hooks/useAdminData';
+import { usePolledData, FAST_POLL, MED_POLL, SLOW_POLL } from '../hooks/useAdminData';
 import { 
   Users, CheckCircle, FileText, IndianRupee, TrendingUp, TrendingDown,
   Download, Sliders, AlertCircle, Shield, Zap, Info, Radio
@@ -7,19 +7,15 @@ import { XAxis, ResponsiveContainer, Tooltip, AreaChart, Area } from 'recharts';
 import { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
 
-const SLOW_POLL = 10000; // Metrics - 10s
-const RAPID_POLL = 5000; // Signals/Queues - 5s
-
 export function Overview() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [config, setConfig] = useState<any[]>([]);
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
 
-  // Split Polling
-  const { data: health } = usePolledData<any>('/health', RAPID_POLL);
-  const { data: disruptions, timestamp: disruptionsTime } = usePolledData<any[]>('/disruptions', RAPID_POLL);
+  // Optimised polling — only what the overview actually needs
+  const { data: health } = usePolledData<any>('/health', MED_POLL);
+  const { data: disruptions, timestamp: disruptionsTime } = usePolledData<any[]>('/disruptions', MED_POLL);
   const { data: pipeline, timestamp: pipelineTime } = usePolledData<any>('/pipeline', SLOW_POLL);
-  const { data: signals } = usePolledData<any>('/signals', RAPID_POLL);
 
   useEffect(() => {
     if (isConfigOpen) {
@@ -292,11 +288,7 @@ export function Overview() {
                     time: getTimeAgo(d.timestamp),
                     highlight: true
                   })),
-                  ...(signals?.weather?.condition ? [{
-                    icon: <Zap size={14} className="text-blue-600" />,
-                    text: `Weather: ${signals.weather.condition} in ${signals.cityId}`,
-                    time: 'Just now'
-                  }] : []),
+                  { icon: <Zap size={14} className="text-blue-600" />, text: `Servers Online: ${health?.servers?.filter((s: any) => s.status === 'UP').length || 0}/${health?.servers?.length || 0}`, time: 'Live' },
                   { icon: <CheckCircle size={14} className="text-teal-600" />, text: `Active Node: ${health?.servers?.[0]?.name || 'Core'}`, time: 'Healthy' }
                 ].map((s: any, i) => (
                   <div key={i} className={`flex gap-3 items-start p-2 rounded-xl transition-all ${s.highlight ? 'bg-orange-50 border border-orange-100' : ''}`}>
