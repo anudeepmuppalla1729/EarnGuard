@@ -163,11 +163,14 @@ export const getMetrics = async () => {
 
 export const getRiskOverview = async () => {
     const res = await pool.query(`
-        SELECT DISTINCT ON (zs.zone_id)
-            z.name as zone_name, zs.zone_id, zs.risk_score, zs.order_drop_percentage, zs.created_at
-        FROM zone_risk_snapshots zs
-        JOIN zones z ON z.id = zs.zone_id
-        ORDER BY zs.zone_id, zs.created_at DESC
+        SELECT DISTINCT ON (z.id)
+            z.name as zone_name, z.id as zone_id, 
+            COALESCE(zs.risk_score, 0) as risk_score, 
+            COALESCE(zs.order_drop_percentage, 0) as order_drop_percentage, 
+            zs.created_at
+        FROM zones z
+        LEFT JOIN zone_risk_snapshots zs ON z.id = zs.zone_id
+        ORDER BY z.id, zs.created_at DESC
     `);
 
     // Fetch raw signals per zone for breakdown
@@ -518,18 +521,38 @@ export const getPricing = async () => {
 // ── SIGNAL DEBUG ─────────────────────────────────────────────────────────────
 
 export const getSignals = async (zoneId: string) => {
-    // Determine city from zone
-    const zoneRes = await pool.query('SELECT city_id FROM zones WHERE id = $1', [zoneId]);
-    const cityId = zoneRes.rows[0]?.city_id || 'C1';
+    let cityId = 'C1';
+    let zonesToFetch = [zoneId];
 
-    const [weatherRes, trafficRes, platRes, newsRes] = await Promise.all([
-        fetch(`${SIM_URL}/weather?cityId=${cityId}`).then(r => r.json()).catch(() => ({})),
-        fetch(`${SIM_URL}/traffic?zoneId=${zoneId}`).then(r => r.json()).catch(() => ({})),
-        fetch(`${SIM_URL}/platform?zoneId=${zoneId}`).then(r => r.json()).catch(() => ({})),
-        fetch(`${SIM_URL}/news?cityId=${cityId}`).then(r => r.json()).catch(() => ({})),
+    if (zoneId === 'all') {
+        const zonesRes = await pool.query('SELECT id FROM zones WHERE city_id = $1', [cityId]);
+        zonesToFetch = zonesRes.rows.map(r => r.id);
+    } else {
+        const zoneRes = await pool.query('SELECT city_id FROM zones WHERE id = $1', [zoneId]);
+        if (zoneRes.rows.length > 0) cityId = zoneRes.rows[0].city_id;
+    }
+
+    const weatherPromise = fetch(`${SIM_URL}/weather?cityId=${cityId}`).then(r => r.json()).catch(() => ({}));
+    const newsPromise = fetch(`${SIM_URL}/news?cityId=${cityId}`).then(r => r.json()).catch(() => ({}));
+
+    const trafficPromises = zonesToFetch.map(z => fetch(`${SIM_URL}/traffic?zoneId=${z}`).then(r => r.json()).catch(() => null));
+    const platformPromises = zonesToFetch.map(z => fetch(`${SIM_URL}/platform?zoneId=${z}`).then(r => r.json()).catch(() => null));
+
+    const [weatherRes, newsRes, ...rest] = await Promise.all([
+        weatherPromise,
+        newsPromise,
+        ...trafficPromises,
+        ...platformPromises
     ]);
 
-    return { zoneId, cityId, weather: weatherRes, traffic: trafficRes, platform: platRes, news: newsRes };
+    const trafficRes = rest.slice(0, zonesToFetch.length).filter(t => t && Object.keys(t).length > 0);
+    const platRes = rest.slice(zonesToFetch.length).filter(p => p && Object.keys(p).length > 0);
+
+    if (zoneId === 'all') {
+        return { zoneId, cityId, weather: weatherRes, traffic: trafficRes, platform: platRes, news: newsRes };
+    } else {
+        return { zoneId, cityId, weather: weatherRes, traffic: trafficRes[0] || {}, platform: platRes[0] || {}, news: newsRes };
+    }
 };
 
 // ── SIMULATION PROXY ─────────────────────────────────────────────────────────

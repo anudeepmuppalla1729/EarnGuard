@@ -10,14 +10,24 @@ function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
 }
 
+const ZONES = [
+  { id: 'Z1', name: 'Z1 - Madhapur Dark Store' },
+  { id: 'Z2', name: 'Z2 - Kondapur Dark Store' },
+  { id: 'Z3', name: 'Z3 - Gachibowli Dark Store' },
+  { id: 'Z4', name: 'Z4 - Jubilee Hills Dark Store' },
+  { id: 'Z5', name: 'Z5 - Banjara Hills Dark Store' },
+  { id: 'Z6', name: 'Z6 - Hitec City Dark Store' },
+];
+
 export function SimulationControls() {
   const [chaos, setChaos] = useState<any>({ weather: 'idle', traffic: 'idle', platform: 'idle', news: 'idle' });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
+  const [selectedZone, setSelectedZone] = useState('Z1');
 
   const fetchStatus = async () => {
     try {
-      const res = await apiClient.get('/signals?zoneId=Z1');
+      const res = await apiClient.get(`/signals?zoneId=${selectedZone}`);
       const d = res.data.data;
       setChaos({
         weather: d.weather?.extreme_alert ? 'severe' : (d.weather?.rainfall_mm > 10 ? 'moderate' : 'idle'),
@@ -32,13 +42,13 @@ export function SimulationControls() {
     fetchStatus();
     const interval = setInterval(fetchStatus, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedZone]);
 
   const triggerEvent = async (type: string, level: string) => {
     setLoading(true);
     setToast('');
     try {
-      let payload = { cityId: 'C1', zoneId: 'Z1' } as any;
+      let payload = { cityId: 'C1', zoneId: selectedZone } as any;
       
       if (type === 'weather') {
         if (level === 'idle') payload = { ...payload, rainfall_mm: 10, temperature: 28, condition: 'CLEAR', extreme_alert: false };
@@ -79,7 +89,20 @@ export function SimulationControls() {
 
   return (
     <div className="animate-in pb-10">
-      <PageHeader title="Simulation Engine Controls" description="Manually adjust external API environments for End-to-End stress testing" />
+      <div className="flex justify-between items-start mb-6">
+        <PageHeader title="Simulation Engine Controls" description="Manually adjust external API environments for End-to-End stress testing" />
+        <div className="flex flex-col gap-1 text-right mt-2">
+          <label className="text-[10px] font-bold tracking-widest uppercase opacity-40">Target Area</label>
+          <select 
+            value={selectedZone}
+            onChange={(e) => setSelectedZone(e.target.value)}
+            className="card-surface px-4 py-2 text-sm font-semibold outline-none border focus:border-[var(--color-primary)] transition-colors cursor-pointer"
+            style={{ borderColor: 'var(--color-surface-high)' }}
+          >
+            {ZONES.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
+          </select>
+        </div>
+      </div>
 
       {toast && (
         <div className="mb-4 p-3 rounded-lg text-sm bg-emerald-50 text-emerald-900 border-l-4 border-emerald-500 font-medium">
