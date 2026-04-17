@@ -6,6 +6,7 @@
 > - **[Core Backend Architecture](docs/core_architecture.md)**: Deep-dive into the Node.js/Express backend, BullMQ/Redis worker lifecycle (like the hourly disruption detection), and mock server integrations.
 > - **[ML Pricing Architecture](docs/ml_architecture.md)**: Analysis of the XGBoost base pricing and Risk assessment models.
 > - **[Mobile App Architecture](docs/mobile_architecture.md)**: Breakdown of the React Native client, Zustand state management, and API security model.
+> - **[Local Setup Guide](SETUP.md)**: Step-by-step instructions to run the entire 5-component ecosystem locally.
 
 ---
 
@@ -412,13 +413,35 @@ For a deeper dive into the internal workings of each component, please refer to 
 
 ---
 
-## 10. Adversarial Defense & Anti-Spoofing Strategy
+## 10. Manual Claim Validation — The "Tough" Process
+
+While parametric claims are automatic, workers can also file **Manual Claims** if they believe a disruption was missed. To protect the capital pool, manual claims undergo a rigorous, multi-stage validation sequence.
+
+### 10.1 Validation Pipeline Stages
+
+1.  **The Idempotency Lock**: Every submission requires a unique `client_request_id`. This prevents "double-dipping" where a worker might accidentally or intentionally tap the claim button multiple times.
+2.  **Velocity Control**: We enforce a strict **Cooldown Policy**. A worker is limited to **5 manual claims per 24-hour period**. This prevents brute-force attempts to guess "high-risk" intervals.
+3.  **Parametric Cross-Correlation**:
+    *   The system takes the worker's claimed `startTime` and `endTime`.
+    *   It queries the `zone_risk_snapshots` table for that specific zone and timeframe.
+    *   **Hard Reject**: If no risk snapshots exist for that window (meaning our engine saw zero anomalies), the claim is rejected instantly.
+4.  **The LAS Heuristic Engine**:
+    *   **Online Check**: Queries the simulation server to verify the worker was actually `is_online` during the disruption.
+    *   **Platform Confirmation**: Checks if the platform order volume in that zone actually dropped by >30%.
+    *   **Ring Check**: Monitors if multiple workers in the same zone are filing claims simultaneously (Burst Detection).
+5.  **Status Routing**:
+    *   **Approved**: High LAS score + High Risk match.
+    *   **Hold & Verify**: Soft flags (e.g., worker was online but zone drop was <30%). These move to a manual review queue in the admin portal.
+    *   **Hard Reject**: No zone risk match or failed check-in status.
+
+---
+
+## 11. Adversarial Defense & Anti-Spoofing Strategy
 
 > 🚨 **Threat Scenario:** A coordinated ring of delivery workers fakes their location inside a severe weather zone while safely at home — triggering mass parametric payouts and draining the liquidity pool.
 
 EarnGuard addresses this through its **Location Authenticity Score (LAS)** — a heuristic scoring engine integrated directly into the claim processing pipeline (Layer 3). It cross-validates claims against real-time platform and zone-level signals.
 
----
 
 ### 9.1 The Differentiation — Genuine Stranding vs. GPS Spoofing
 
