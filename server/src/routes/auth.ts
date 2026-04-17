@@ -54,7 +54,8 @@ const RegisterSchema = z.object({
   body: z.object({
     email: z.email(),
     password: z.string().min(6),
-    mobile: z.string().min(1), // Platform resolves worker ID from email + mobile
+    mobile: z.string().min(1),
+    name: z.string().min(2), // New: accept worker's full name from UI
   }),
 });
 
@@ -99,9 +100,9 @@ router.post('/login', validate(LoginSchema), async (req: Request, res: Response)
 });
 
 /** Generate a unique fallback gig worker profile when mock server is unavailable */
-function resolveGigWorker(mobile: string, email: string) {
+function resolveGigWorker(mobile: string, email: string, fallbackName: string) {
   const uniqueId = 'WRK-FB-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
-  const name = email.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'New Worker';
+  const name = fallbackName || email.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'New Worker';
   const platforms = ['ZEPTO', 'BLINKIT', 'SWIGGY'] as const;
   const zones = ['Z1', 'Z2'];
   return {
@@ -115,7 +116,7 @@ function resolveGigWorker(mobile: string, email: string) {
 
 // ─── POST /register ─────────────────────────────────────────────────────────────────────
 router.post('/register', validate(RegisterSchema), async (req: Request, res: Response): Promise<void> => {
-  const { email, password, mobile } = req.body;
+  const { email, password, mobile, name } = req.body;
   const hash = await bcrypt.hash(password, 10);
   const id = uuidv4();
 
@@ -128,17 +129,17 @@ router.post('/register', validate(RegisterSchema), async (req: Request, res: Res
       const lookupRes = await fetch(`${MOCK_API}/platform/workers/lookup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, mobile }),
+        body: JSON.stringify({ email, mobile, name }),
         signal: AbortSignal.timeout(3000), // don't hang if mock server is down
       });
       if (lookupRes.ok) {
         gigWorker = await lookupRes.json();
       } else {
-        gigWorker = resolveGigWorker(mobile, email);
+        gigWorker = resolveGigWorker(mobile, email, name);
         console.warn('[Register] Mock server lookup failed, using inline fallback');
       }
     } catch {
-      gigWorker = resolveGigWorker(mobile, email);
+      gigWorker = resolveGigWorker(mobile, email, name);
       console.warn('[Register] Mock server unreachable, using inline fallback');
     }
 

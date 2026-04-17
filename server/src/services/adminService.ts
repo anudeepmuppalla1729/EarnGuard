@@ -9,6 +9,7 @@ import { redisConfig } from '../queue/redis';
 dotenv.config();
 
 const SIM_URL = process.env.SIM_URL || 'http://localhost:4000';
+const ML_URL = process.env.ML_URL || 'http://localhost:8000';
 
 // ── SYSTEM HEALTH ────────────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ export const getHealth = async () => {
 
         const [simPing, mlPing] = await Promise.all([
             checkServer(SIM_URL),
-            checkServer('http://localhost:8000')
+            checkServer(ML_URL)
         ]);
 
         const servers = [

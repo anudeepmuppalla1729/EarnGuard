@@ -79,7 +79,7 @@ app.get('/platform/workers/:id/income-stats', async (req, res) => {
 // POST /platform/workers/lookup  — auto-assign worker ID by email + mobile
 // This simulates the platform API resolving a gig-worker identity
 app.post('/platform/workers/lookup', async (req, res) => {
-  const { email, mobile } = req.body as { email?: string; mobile?: string };
+  const { email, mobile, name: providedName } = req.body as { email?: string; mobile?: string; name?: string };
   if (!email || !mobile) {
     return res.status(400).json({ error: 'email and mobile are required' });
   }
@@ -92,7 +92,7 @@ app.post('/platform/workers/lookup', async (req, res) => {
     
     // Create new mock driver logic
     const newPlatformWorkerId = 'WRK-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
-    const name = email.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'New Worker';
+    const name = providedName || email.split('@')[0].replace(/[^a-zA-Z]/g, ' ') || 'New Worker';
     const platformName = Math.random() > 0.5 ? 'ZEPTO' : 'BLINKIT';
     const cityId = 'C1';
     const zoneId = Math.random() > 0.5 ? 'Z1' : 'Z2';
