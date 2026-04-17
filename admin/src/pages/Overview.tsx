@@ -16,7 +16,6 @@ export function Overview() {
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
 
   // Split Polling
-  const { data: m } = usePolledData<any>('/metrics', SLOW_POLL);
   const { data: health } = usePolledData<any>('/health', RAPID_POLL);
   const { data: disruptions, timestamp: disruptionsTime } = usePolledData<any[]>('/disruptions', RAPID_POLL);
   const { data: pipeline, timestamp: pipelineTime } = usePolledData<any>('/pipeline', SLOW_POLL);
@@ -62,13 +61,6 @@ export function Overview() {
     const seconds = Math.floor((new Date().getTime() - new Date(ts).getTime()) / 1000);
     return `${seconds}s ago`;
   };
-
-  const cards = [
-    { label: 'Total Workers', val: m?.totalWorkers?.toLocaleString() ?? '...', trend: '+12.5%', isUp: true, icon: <Users size={16} /> },
-    { label: 'Active Policies', val: m?.activePolicies?.toLocaleString() ?? '...', trend: '+4.2%', isUp: true, icon: <Shield size={16} /> },
-    { label: 'Total Claims', val: m?.totalClaims?.toLocaleString() ?? '...', trend: m?.claimsTrend || '...', isUp: m?.claimsTrend?.startsWith('+'), icon: <FileText size={16} /> },
-    { label: 'Total Payout', val: m?.totalPayout != null ? `₹${m.totalPayout.toLocaleString()}` : '...', trend: '+10.3%', isUp: true, icon: <IndianRupee size={16} /> },
-  ];
 
   return (
     <div className="animate-in space-y-8">
@@ -163,28 +155,6 @@ export function Overview() {
           </div>
         </div>
       )}
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        {cards.map((c) => (
-          <div key={c.label} className="card-surface p-6 relative overflow-hidden group">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2.5 rounded-xl transition-colors" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
-                {c.icon}
-              </div>
-              <div className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${c.isUp ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {c.isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                {c.trend}
-              </div>
-            </div>
-            <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--color-outline)' }}>{c.label}</p>
-            <p className="text-3xl font-bold tracking-tight" style={{ color: 'var(--color-on-surface)' }}>{c.val}</p>
-            
-            {/* Background Glow */}
-            <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
-          </div>
-        ))}
-      </div>
 
       {/* Charts & Sidebar Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
