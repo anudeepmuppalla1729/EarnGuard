@@ -70,7 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signup: async (email, password, name, mobile, platform: 'ZEPTO' | 'BLINKIT' | 'SWIGGY' = 'ZEPTO', city_id = 'C1', zone_id = 'Z1') => {
     set({ isLoading: true });
     try {
-      await apiClient.auth.register(email, password, mobile);
+      await apiClient.auth.register(email, password, mobile, name);
       // After sign up, perform login
       await get().login(email, password);
     } catch (e) {

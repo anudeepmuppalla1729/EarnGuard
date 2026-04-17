@@ -18,8 +18,10 @@ import Constants from 'expo-constants';
 const debuggerHost = Constants.expoConfig?.hostUri;
 const localIp = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
 console.log(localIp)
-const BASE_URL = process.env.EXPO_PUBLIC_SERVER_URL || `http://${localIp}:3000/api/v1`;
+const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL || `http://${localIp}:3000`;
+const BASE_URL = `${serverUrl}/api/v1`;
 
+console.log(BASE_URL);
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -136,8 +138,8 @@ export const apiClient = {
      * POST /api/v1/auth/register
      * Worker ID is auto-assigned by the platform API using email + mobile.
      */
-    register: (email: string, password: string, mobile: string): Promise<ApiResponse<{ id: string; platformWorkerId: string; name: string; platform: string }>> =>
-      post<ApiResponse<{ id: string; platformWorkerId: string; name: string; platform: string }>>('/auth/register', { email, password, mobile }),
+    register: (email: string, password: string, mobile: string, name: string): Promise<ApiResponse<{ id: string; platformWorkerId: string; name: string; platform: string }>> =>
+      post<ApiResponse<{ id: string; platformWorkerId: string; name: string; platform: string }>>('/auth/register', { email, password, mobile, name }),
 
     /**
      * Simulated OTP verification — no backend endpoint, accept any 6-digit code
