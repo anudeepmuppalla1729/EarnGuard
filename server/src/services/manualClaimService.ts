@@ -219,8 +219,8 @@ export async function processManualClaim(input: ManualClaimInput): Promise<Claim
       [input.workerId]
     );
 
-    if (parseInt(cooldownRes.rows[0].count) >= 3) {
-      throw { status: 429, code: 'COOLDOWN_ACTIVE', message: 'You can only file up to 3 approved manual claims every 24 hours' };
+    if (parseInt(cooldownRes.rows[0].count) >= 5) {
+      throw { status: 429, code: 'COOLDOWN_ACTIVE', message: 'You can only file up to 5 approved manual claims every 24 hours' };
     }
 
     // 5. Parse and normalize timestamps to UTC

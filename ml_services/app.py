@@ -13,6 +13,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="City Base Price Calc Model API", lifespan=lifespan)
 
+@app.get("/")
+async def health_check():
+    return {"status": "ok", "service": "ML Inference API"}
+
 app.include_router(prediction_router, prefix="/api/v1")
 app.include_router(weekly_pricing_router)
 if __name__ == "__main__":

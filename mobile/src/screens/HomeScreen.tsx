@@ -293,26 +293,35 @@ const ActivityItem = ({ title, amount, time, type, isLast }: any) => (
 );
 
 const AnimatedBalance = ({ value }: { value: number }) => {
-  const animatedValue = useSharedValue(0);
-  const [displayValue, setDisplayValue] = useState("0.00");
+  const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {
-    animatedValue.value = withTiming(value, {
-      duration: 800,
-      easing: Easing.out(Easing.exp),
-    });
+    let startValue = displayValue;
+    let endValue = value;
+    let startTime: number | null = null;
+    const duration = 800;
+    let animationFrame: ReturnType<typeof requestAnimationFrame>;
     
-    const interval = setInterval(() => {
-      setDisplayValue(animatedValue.value.toFixed(2));
-      if (Math.abs(animatedValue.value - value) < 0.01) {
-        clearInterval(interval);
+    const easeOutExp = (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const current = startValue + (endValue - startValue) * easeOutExp(progress);
+      setDisplayValue(current);
+      
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(endValue);
       }
-    }, 16);
+    };
     
-    return () => clearInterval(interval);
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
   }, [value]);
 
-  return <Text style={styles.balanceAmount}>{displayValue}</Text>;
+  return <Text style={styles.balanceAmount}>{displayValue.toFixed(2)}</Text>;
 };
 
 // ── Styles ──────────────────────────────────────────────────────────────────
