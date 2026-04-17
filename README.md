@@ -269,7 +269,7 @@ AI and ML are not bolt-ons in EarnGuard — they are the **core engine** of the 
 | City Base Price Model | Gradient-boosted regression (XGBoost) | Historical weather, demand, and income context data | City-tier base price (Rs.) | Implemented |
 | Weekly Risk Assessor | Large Language Model (Gemini 2.5 Flash) | Real-time weather, platform status, local news snippets | Disruption type, severity score (0-1) | Implemented |
 | Weekly Pricing Engine | Deterministic Algorithm | Base price, generated risk scores, configuration | Weekly Risk Additional Amount (Rs.) | Implemented |
-| Fraud / anomaly detector | Isolation Forest + rule-based layer | Claim history, location data, platform order logs, weather match | Fraud score 0–1 + accept/reject | Planned |
+| Anti-Spoofing Scorer | Heuristic-based Scoring (LAS) | Online status, platform order drops, zone claim density | Location Authenticity Score (0-1) | Implemented |
 | Model health monitor | Statistical drift detection | Live prediction distributions vs. training baseline | Drift alert + retrain trigger | Planned |
 
 ---
@@ -286,23 +286,21 @@ AI and ML are not bolt-ons in EarnGuard — they are the **core engine** of the 
 
 ### 5.3 Fraud Detection — Three-Layer Approach
 
-All claims (auto-triggered and manual) pass through three layers:
+All claims (auto-triggered and manual) pass through three defensive layers:
 
-**Layer 1 — Duplicate check**
-Has this exact claim (same worker, same zone, same event window) been processed before? If yes → reject immediately.
+**Layer 1 — Idempotency & Cooldown Protection**
+The system uses a `client_request_id` to prevent duplicate submissions. It also enforces a strict cooldown period (e.g., max 5 approved claims per 24 hours) to prevent automated draining of the insurance pool.
 
-**Layer 2 — Multiagent validation**
-Three independent validation agents check the claim against:
-- **Platform API** — was the worker active in the zone during the claimed interval?
-- **Weather API** — was the weather condition actually severe at that location/time?
-- **System logs** — was the disruption event independently recorded by the pipeline?
+**Layer 2 — Parametric Risk Verification**
+Claims are cross-referenced against our **Disruption Engine**. A claim is only valid if independent data (Weather, News, Traffic) confirms a material disruption in the worker's specific zone during the claimed interval.
 
-A rule-based validation score is computed from these three checks.
+**Layer 3 — Location Authenticity (LAS) Scoring**
+A heuristic scoring engine calculates a **Location Authenticity Score (0-1)** by correlating:
+- **Platform Active Check-in**: Verifying if the worker was marked online by the platform dark store.
+- **Zone Drop Confirmation**: Confirming that platform order volumes in that zone dropped by >30% during the disruption.
+- **Ring Detection**: Flagging coordinated spikes where too many workers in the same zone file claims simultaneously.
 
-**Layer 3 — ML anomaly detection**
-An Isolation Forest model trained on historical valid and fraudulent claims scores the new claim. If the anomaly score exceeds the threshold, the claim is flagged for rejection or manual review.
-
-Claims passing all three layers are approved. The full validation trace is stored for audit and future model retraining.
+Claims passing these layers are approved; those with low LAS scores are held for manual verification or hard-rejected.
 
 ---
 
@@ -530,30 +528,23 @@ Individual worker-level detection catches isolated spoofers. Defeating a coordin
 Claim arrives (auto-trigger or manual)
         │
         ▼
-[Existing Layer 1]  Duplicate check
+[Layer 1]  Idempotency Check (client_request_id)
         │
         ▼
-[Existing Layer 2]  Multiagent validation (Platform API + Weather API + logs)
+[Layer 2]  Parametric Risk Verification (Zone Snapshots)
         │
         ▼
-[Existing Layer 3]  Isolation Forest anomaly score
-        │
-        ▼
-[NEW Layer 4]  Anti-Spoofing Module
+[Layer 3]  Location Authenticity Score (LAS)
    ├── Platform signals: order dispatch log, dark store check-in,
-   │   last active delivery timestamp
-   ├── Device signals: accelerometer / motion pattern (supporting indicator)
-   ├── Behavioral signals: claim timing cluster, frequency spike,
-   │   historical consistency
-   ├── Population signals: claim burst monitor, co-claim graph
-   │   clustering (Louvain), device ID / UPI overlap
-   └── → Compute Location Authenticity Score (LAS)
+   │   is_online status
+   ├── Environmental correlation: Zone order drop % > 30%
+   └── Population signals: Claim burst monitor, Ring detection
         │
         ┌────────────────────────────────────┐
         │  LAS ≥ 0.85  → Auto-approve        │
         │  LAS 0.60–0.84 → Soft-flag, pay    │
         │  LAS 0.35–0.59 → Hold + verify     │
-        │  LAS < 0.35  → Reject + appeal     │
+        │  LAS < 0.35  → Hard-Reject         │
         └────────────────────────────────────┘
 ```
 
