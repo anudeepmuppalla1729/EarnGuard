@@ -36,8 +36,9 @@
 7. [System Architecture](#7-system-architecture)  
 8. [Coverage Constraints & Golden Rules](#8-coverage-constraints--golden-rules)  
 9. [Key Differentiators](#9-key-differentiators)
-10. [Adversarial Defense & Anti-Spoofing Strategy](#10-adversarial-defense--anti-spoofing-strategy)
-11. [Disruption Engine Refactor & Intelligence Upgrade](#11-disruption-engine-refactor--intelligence-upgrade)
+10. [Manual Claim Validation — The "Tough" Process](#10-manual-claim-validation--the-tough-process)
+11. [Adversarial Defense & Anti-Spoofing Strategy](#11-adversarial-defense--anti-spoofing-strategy)
+12. [Disruption Engine Refactor & Intelligence Upgrade](#12-disruption-engine-refactor--intelligence-upgrade)
 
 ---
 
