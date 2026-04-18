@@ -7,6 +7,7 @@
 > - **[ML Pricing Architecture](docs/ml_architecture.md)**: Analysis of the XGBoost base pricing and Risk assessment models.
 > - **[Mobile App Architecture](docs/mobile_architecture.md)**: Breakdown of the React Native client, Zustand state management, and API security model.
 > - **[Local Setup Guide](SETUP.md)**: Step-by-step instructions to run the entire 5-component ecosystem locally.
+> - **[Project Pitch Deck](<pitch deck/EarnGuard-Parametric-Insurance-for-the-Gig-Economy.pptx>)**: High-level overview of EarnGuard's vision, business model, and technical innovation.
 
 ---
 
