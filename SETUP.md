@@ -83,6 +83,8 @@ Create two separate databases in your PostgreSQL instance:
    VITE_SERVER_URL=http://localhost:3000
    ```
 4. Start: `npm run dev`
+5. Username: admin
+6. Password: admin123
 
 ### 6. Mobile App (Expo)
 1. `cd mobile`
